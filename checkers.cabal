@@ -15,12 +15,16 @@ license-file:        LICENSE
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
+data-dir:            resources
 
 executable checkers
   main-is:             Main.hs
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.6 && < 4.8,
+                       wxc >= 0.90,
+                       wxcore >= 0.90,
+                       wx >= 0.90
   hs-source-dirs:      src
   default-language:    Haskell2010
 
