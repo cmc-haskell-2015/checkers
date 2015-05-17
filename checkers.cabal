@@ -17,14 +17,20 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 data-dir:            resources
 
+flag usewx
+  description:         Use wxWidgets as frontend
+  default:             True
+
 executable checkers
-  main-is:             Main.hs
-  -- other-modules:
-  -- other-extensions:
-  build-depends:       base >=4.6 && < 4.8,
-                       wxc >= 0.90,
-                       wxcore >= 0.90,
-                       wx >= 0.90
+  if flag(usewx)
+    main-is:             Main-wx.hs
+    build-depends:       base >=4.6 && <4.8,
+                         wxc >=0.90,
+                         wxcore >=0.90,
+                         wx >=0.90
+  else
+    main-is:             Main-nowx.hs
+    build-depends:       base >=4.6 && <4.8
   hs-source-dirs:      src
   default-language:    Haskell2010
 
