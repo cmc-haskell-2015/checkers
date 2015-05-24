@@ -77,15 +77,13 @@ strip s = lstrip $ rstrip s
 
 showMovesForCoord :: Game -> Color -> Coord -> Bool -> IO ()
 showMovesForCoord game color c first =
-    if piece == Nothing
-    then putStrLn $ "No piece at " ++ (coord2str c)
-    else if getColor piece /= color
-    then putStrLn "Invalid piece color"
-    else putStrLn $ concat $ smoves
+    case piece of
+      Nothing -> putStrLn $ "No piece at " ++ (coord2str c)
+      (Just p) -> if pcolor p /= color
+                  then putStrLn "Invalid piece color"
+                  else putStrLn $ concat smoves
   where
     piece = getPiece game c
-    getColor :: Maybe Piece -> Color
-    getColor (Just p) = (pcolor p)
     moves = getMovesByCoord game c first
     smoves = [(coord2str c) ++ "-" ++ (coord2str (mto m)) ++ "\n" | m <- moves]
 
@@ -134,7 +132,7 @@ checkFirst (Just c1) ((Just c2):_) = (c1 == c2)
 
 processLine :: Game -> Color -> Maybe Coord -> String -> IO [CoordPair]
 processLine game@(Game cfg _) color c ('m':s) = do
-    showMoves game color c (str2coord cfg (strip s))
+    showMoves game color (str2coord cfg (strip s)) c
     waitForMovement game color c
 processLine game@(Game cfg _) color c s =
     if length splitted < 2
