@@ -153,10 +153,10 @@ goKing g@(Game cfg _) p@(Piece _ _ pos) curPos@(Coord row col) dx dy first =
       if (row + dx) >= 0 && (row + dx) < (gcBoardSize cfg) &&
         (col + dy) >= 0 && (col + dy) < (gcBoardSize cfg) &&
         (getPiece g curPos) /= Nothing &&
-        (getPiece g (Coord (row + dx) (col + dx))) == Nothing &&
+        (getPiece g (Coord (row + dx) (col + dy))) == Nothing &&
         length eaten > 0
       then
-        [Movement pos (Coord (row + dx) (col + dx)) eaten False False first]
+        [Movement pos (Coord (row + dx) (col + dy)) eaten False False first]
       else
         []
 
