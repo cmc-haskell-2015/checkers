@@ -43,10 +43,10 @@ processMoves env game color lastc (first:rest) =
       (Just m) -> runNext (execMovement game m) m
   where
     move = findMove game first (lastc == Nothing)
-    runNext :: Game -> Movement -> [CoordPair] -> IO ()
+    runNext :: Game -> Movement -> IO ()
     runNext game_ m = if mfinal m
                       then makeTurn env game_ (nextColor color)
-                      else processMoves env game_ color (Just $ mto m)
+                      else processMoves env game_ color (Just $ mto m) rest
 
 processMoves2 :: GameEnv -> Game -> Color -> Maybe Coord -> IO ()
 processMoves2 env game color lastc = do
