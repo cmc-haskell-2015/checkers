@@ -38,16 +38,15 @@ checkMovements game (Just c) = (length $ getMovesByCoord game c False) > 0
 processMoves :: GameEnv -> Game -> Color -> Maybe Coord -> [CoordPair] -> IO ()
 processMoves env game color lastc [] = makeTurnImpl env game color lastc
 processMoves env game color lastc (first:rest) =
-    if move /= Nothing
-    then if mfinal (getVal move)
-      then makeTurn env (execMovement game (getVal move)) (nextColor color)
-      else processMoves env (execMovement game (getVal move))
-                        color (Just $ mto $ getVal move) rest
-    else invalidMove env game color
+    case move of
+      Nothing -> invalidMove env game color
+      (Just m) -> runNext (execMovement game m) m
   where
     move = findMove game first (lastc == Nothing)
-    getVal :: Maybe Movement -> Movement
-    getVal (Just m) = m
+    runNext :: Game -> Movement -> [CoordPair] -> IO ()
+    runNext game_ m = if mfinal m
+                      then makeTurn env game_ (nextColor color)
+                      else processMoves env game_ color (Just $ mto m)
 
 processMoves2 :: GameEnv -> Game -> Color -> Maybe Coord -> IO ()
 processMoves2 env game color lastc = do
