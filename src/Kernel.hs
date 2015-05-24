@@ -136,10 +136,42 @@ getManMoves g p@(Piece _ cl pos@(Coord row col)) first =
   (getComplexMovement g p (Coord (row + 1) (col + 1))
                           (Coord (row + 2) (col + 2)) first)
 
+goKing :: Game -> Piece -> Coord -> Int -> Int -> Bool -> [Movement]                          
+goKing g@(Game cfg _) p@(Piece _ _ pos) curPos@(Coord row col) dx dy first =
+  if row >= 0 && row < (gcBoardSize cfg) &&
+     col >= 0 && col < (gcBoardSize cfg) &&
+     (getPiece g curPos) == Nothing
+  then
+    if first == True then
+      [Movement pos curPos [] False True first] ++ (goKing g p (Coord (row + dx) (col + dy)) dx dy first)
+    else
+      (goKing g p (Coord (row + dx) (col + dy)) dx dy first)
+  else 
+    let tpiece = (getPiece g curPos)
+        eaten = (eatThisPiece p tpiece)
+    in  
+      if (row + dx) >= 0 && (row + dx) < (gcBoardSize cfg) &&
+        (col + dy) >= 0 && (col + dy) < (gcBoardSize cfg) && 
+        (getPiece g curPos) /= Nothing &&
+        (getPiece g (Coord (row + dx) (col + dx))) == Nothing &&
+        length eaten > 0
+      then
+        [Movement pos (Coord (row + dx) (col + dx)) eaten False False first]
+      else
+        []
+                          
+getKingMoves :: Game -> Piece -> Bool -> [Movement]
+getKingMoves g p@(Piece _ _ pos@(Coord row col)) first =
+  (goKing g p (Coord (row + 1) (col + 1)) 1 1 first) ++
+  (goKing g p (Coord (row + 1) (col - 1)) 1 (-1) first) ++
+  (goKing g p (Coord (row - 1) (col + 1)) (-1) 1 first) ++
+  (goKing g p (Coord (row - 1) (col - 1)) (-1) (-1) first)
+                          
+                          
 getPieceMoves :: Game -> Maybe Piece -> Bool -> [Movement]
 getPieceMoves g (Just p@(Piece tp _ _)) first = case tp of
                                                   Man -> getManMoves g p first
-                                                  King -> []
+                                                  King -> getKingMoves g p first
 getPieceMoves _ Nothing _ = []
 
 getMovesByCoord :: Game -> Coord -> Bool -> [Movement]
