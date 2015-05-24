@@ -10,6 +10,8 @@ module Kernel ( PieceType(Man, King)
               , getWinner
               , getPiece
               , getPiecesByColor
+              , getAllMovesByColor
+              , getAllMovesByCoord
               , getMovesByCoord
               , getMovesByColor
               , findMove
@@ -51,10 +53,11 @@ data Movement = Movement { mfrom :: Coord
                          , mfirst :: Bool } deriving (Show, Eq)
 
 data GameConfig = GameConfig { gcBoardSize :: Int
-                             , gcFirstColor :: Color }
+                             , gcFirstColor :: Color
+                             , isGreedy :: Bool}
 
 defaultConfig :: GameConfig
-defaultConfig = GameConfig 8 White
+defaultConfig = GameConfig 8 White True
 
 type GameState = [Piece]
 data Game = Game { gcfg :: GameConfig
@@ -84,6 +87,7 @@ getPiece (Game cfg (p @ (Piece _ _ pc):rest)) c =
 
 getPiecesByColor :: Game -> Color -> [Piece]
 getPiecesByColor (Game _ state) cl = filter (\x -> (pcolor x) == cl) state
+
 
 drow :: Color -> Int
 drow Black = -1
@@ -174,13 +178,37 @@ getPieceMoves g (Just p@(Piece tp _ _)) first = case tp of
                                                   King -> getKingMoves g p first
 getPieceMoves _ Nothing _ = []
 
-getMovesByCoord :: Game -> Coord -> Bool -> [Movement]
-getMovesByCoord g c first = getPieceMoves g (getPiece g c) first
+getAllMovesByCoord :: Game -> Coord -> Bool -> [Movement]
+getAllMovesByCoord g c first = getPieceMoves g (getPiece g c) first
+
+getAllMovesByColor :: Game -> Color -> [Movement]
+getAllMovesByColor g cl =
+    concat [getAllMovesByCoord g (ppos piece) True | piece <- getPiecesByColor g cl]
+
+haveEating :: [Movement] -> Bool
+haveEating ms = any (\m -> (length $ meaten m) > 0) ms
+
+filterEatingMoves :: [Movement] -> [Movement]
+filterEatingMoves ms = filter (\m -> (length $ meaten m) > 0) ms
 
 getMovesByColor :: Game -> Color -> [Movement]
-getMovesByColor g cl =
-    concat [getMovesByCoord g (ppos piece) True | piece <- getPiecesByColor g cl]
+getMovesByColor g cl = let moves = getAllMovesByColor g cl in
+  if (haveEating moves) then
+    filterEatingMoves moves
+  else
+    moves
 
+getMovesByCoord :: Game -> Coord -> Bool -> [Movement]   
+getMovesByCoord g c first =
+  let moves = getAllMovesByCoord g c first
+      Just p@(Piece _ cl _) = (getPiece g c)
+      allMoves = getAllMovesByColor g cl
+  in
+    if (haveEating allMoves) then
+      filterEatingMoves moves
+    else
+      moves
+  
 findMove :: Game -> CoordPair -> Bool -> Maybe Movement
 findMove g (CoordPair from to) first =
   let move = filter (\x -> (mto x) == to) $ getMovesByCoord g from first
