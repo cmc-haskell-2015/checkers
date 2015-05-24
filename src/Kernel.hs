@@ -136,7 +136,7 @@ getManMoves g p@(Piece _ cl pos@(Coord row col)) first =
   (getComplexMovement g p (Coord (row + 1) (col + 1))
                           (Coord (row + 2) (col + 2)) first)
 
-goKing :: Game -> Piece -> Coord -> Int -> Int -> Bool -> [Movement]                          
+goKing :: Game -> Piece -> Coord -> Int -> Int -> Bool -> [Movement]
 goKing g@(Game cfg _) p@(Piece _ _ pos) curPos@(Coord row col) dx dy first =
   if row >= 0 && row < (gcBoardSize cfg) &&
      col >= 0 && col < (gcBoardSize cfg) &&
@@ -146,12 +146,12 @@ goKing g@(Game cfg _) p@(Piece _ _ pos) curPos@(Coord row col) dx dy first =
       [Movement pos curPos [] False True first] ++ (goKing g p (Coord (row + dx) (col + dy)) dx dy first)
     else
       (goKing g p (Coord (row + dx) (col + dy)) dx dy first)
-  else 
+  else
     let tpiece = (getPiece g curPos)
         eaten = (eatThisPiece p tpiece)
-    in  
+    in
       if (row + dx) >= 0 && (row + dx) < (gcBoardSize cfg) &&
-        (col + dy) >= 0 && (col + dy) < (gcBoardSize cfg) && 
+        (col + dy) >= 0 && (col + dy) < (gcBoardSize cfg) &&
         (getPiece g curPos) /= Nothing &&
         (getPiece g (Coord (row + dx) (col + dx))) == Nothing &&
         length eaten > 0
@@ -159,15 +159,15 @@ goKing g@(Game cfg _) p@(Piece _ _ pos) curPos@(Coord row col) dx dy first =
         [Movement pos (Coord (row + dx) (col + dx)) eaten False False first]
       else
         []
-                          
+
 getKingMoves :: Game -> Piece -> Bool -> [Movement]
 getKingMoves g p@(Piece _ _ pos@(Coord row col)) first =
   (goKing g p (Coord (row + 1) (col + 1)) 1 1 first) ++
   (goKing g p (Coord (row + 1) (col - 1)) 1 (-1) first) ++
   (goKing g p (Coord (row - 1) (col + 1)) (-1) 1 first) ++
   (goKing g p (Coord (row - 1) (col - 1)) (-1) (-1) first)
-                          
-                          
+
+
 getPieceMoves :: Game -> Maybe Piece -> Bool -> [Movement]
 getPieceMoves g (Just p@(Piece tp _ _)) first = case tp of
                                                   Man -> getManMoves g p first
@@ -198,31 +198,29 @@ removePieces state coords = filter (cont coords) state
     cont [] p = True
     cont (first:rest) p = first /= (ppos p) && cont rest p
 
-updatePiece :: Game -> Movement -> Piece
-updatePiece g move@(Movement from to _ bk _ _) =
+updatePiece :: Movement -> Piece -> Piece
+updatePiece move@(Movement _ to _ bk _ _) p =
     p { ptype = (pieceTpUpd (ptype p) bk)
       , ppos = to }
-  where
-    p = extractPieceFromMaybe $ getPiece g from
-      where
-        extractPieceFromMaybe :: Maybe Piece -> Piece
-        extractPieceFromMaybe (Just p) = p
 
 execMovement :: Game -> Movement -> Game
-execMovement g@(Game cfg state) move@(Movement from to eaten bk _ _) =
-    Game cfg ([updatePiece g move] ++ removePieces state ([from] ++ eatenc))
-  where eatenc = map (\x -> (ppos x)) eaten
+execMovement game@(Game cfg state) move@(Movement from _ eaten _ _ _) =
+    case cpiece of
+      Nothing -> game
+      (Just p) -> Game cfg ((updatePiece move p) : tempState)
+  where
+    eatenc = map (\x -> (ppos x)) eaten
+    tempState = removePieces state ([from] ++ eatenc)
+    cpiece = getPiece game from
 
 unexecMovement :: Game -> Movement -> Game
 unexecMovement g@(Game _ state) _ = g -- TODO
 
 makeMove :: Game -> CoordPair -> Bool -> Game
 makeMove g@(Game cfg state) cp first =
-    processMaybe (findMove g cp first)
-  where
-    processMaybe :: Maybe Movement -> Game
-    processMaybe Nothing = g
-    processMaybe (Just move) = execMovement g move
+    case (findMove g cp first) of
+      Nothing -> g
+      (Just move) -> execMovement g move
 
 initState :: GameConfig -> GameState
 initState cfg = [(Piece Man White c) | c <- whitecoords] ++
