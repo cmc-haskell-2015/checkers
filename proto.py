@@ -135,8 +135,9 @@ class GameCore (object):
                 npos = pos + Pos(-2, +2)
                 if pos.col + 2 < self.BOARD_SIZE and not self.get_guy(tpos) is None \
                                                  and self.get_guy(npos) is None:
-                    eatenGuys = [ tpos ] if self.get_guy(tpos).color != guy.color else []
-                    yield Movement(pos, npos, eatenGuys, npos.row == lastrow, False, is_first)
+                    eatenGuys = [ tpos ] if self.get_guy(tpos).color != guy.color else None
+                    if not eatenGuys is None:
+                        yield Movement(pos, npos, eatenGuys, npos.row == lastrow, False, is_first)
 
             if 0 <= pos.row + 2 < self.BOARD_SIZE:
                 tpos = pos + Pos(1, -1)
@@ -150,8 +151,9 @@ class GameCore (object):
                 npos = pos + Pos(2, +2)
                 if pos.col + 2 < self.BOARD_SIZE and not self.get_guy(tpos) is None \
                                                  and self.get_guy(npos) is None:
-                    eatenGuys = [ tpos ] if self.get_guy(tpos).color != guy.color else []
-                    yield Movement(pos, npos, eatenGuys, npos.row == lastrow, False, is_first)
+                    eatenGuys = [ tpos ] if self.get_guy(tpos).color != guy.color else None
+                    if not eatenGuys is None:
+                        yield Movement(pos, npos, eatenGuys, npos.row == lastrow, False, is_first)
         else:
             raise NotImplementedError()
 

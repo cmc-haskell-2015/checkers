@@ -19,7 +19,7 @@ data-dir:            resources
 
 flag usewx
   description:         Use wxWidgets as frontend
-  default:             True
+  default:             False
 
 executable checkers
   if flag(usewx)

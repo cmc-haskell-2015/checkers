@@ -41,7 +41,8 @@ processMoves env game color lastc (first:rest) =
     if move /= Nothing
     then if mfinal (getVal move)
       then makeTurn env (execMovement game (getVal move)) (nextColor color)
-      else processMoves env (execMovement game (getVal move)) color lastc rest
+      else processMoves env (execMovement game (getVal move))
+                        color (Just $ mto $ getVal move) rest
     else invalidMove env game color
   where
     move = findMove game first (lastc == Nothing)
