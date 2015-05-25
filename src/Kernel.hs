@@ -12,7 +12,8 @@ module Kernel ( PieceType(Man, King)
               , GameInitStateType(Regular, Inversed, Custom)
               , GameConfig(GameConfig), gcBoardSize, gcInitState, gcFirstColor,
                                         gcGreedy, gcWinner, gcMenConfig,
-                                        gcKingConfig
+                                        gcKingConfig, gcDeferRemoves,
+                                        gcDeferBecomeKing, gcEnableSeries
               , defaultMenConfig, defaultKingConfig, defaultConfig
               , GameState
               , Game(Game), gcfg, gstate
@@ -103,7 +104,8 @@ data GameConfig = GameConfig { gcBoardSize :: Int
                              , gcMenConfig :: PieceConfig
                              , gcKingConfig :: PieceConfig
                              , gcDeferRemoves :: Bool
-                             , gcDeferBecomeKing :: Bool }
+                             , gcDeferBecomeKing :: Bool
+                             , gcEnableSeries :: Bool }
 
 testInitState :: GameInitStateGen
 testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
@@ -114,7 +116,7 @@ testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
 
 defaultConfig :: GameConfig
 defaultConfig = GameConfig 8 (Regular 3) White True Normal
-                           defaultMenConfig defaultKingConfig True False
+                           defaultMenConfig defaultKingConfig True False True
 
 data GameState = GameState { gsField :: [Piece]
                            , gsRemove :: [Piece]
