@@ -108,7 +108,7 @@ data GameConfig = GameConfig { gcBoardSize :: Int
 testInitState :: GameInitStateGen
 testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
                     then Just White
-                    else if c == (Coord 2 5) || c == (Coord 5 5)
+                    else if c == (Coord 2 5) || c == (Coord 4 5)
                     then Just Black
                     else Nothing
 
