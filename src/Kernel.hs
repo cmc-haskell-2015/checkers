@@ -18,6 +18,7 @@ module Kernel ( PieceType(Man, King)
               , Game(Game), gcfg, gstate
               , getWinner
               , getPiece
+              , willRemovePiece
               , getPiecesByColor
               , getAllMovesByColor
               , getAllMovesByCoord
@@ -27,6 +28,7 @@ module Kernel ( PieceType(Man, King)
               , validMove
               , execMovement
               , unexecMovement
+              , finishTurn
               , makeMove
               , initState
               , createGame ) where
@@ -112,7 +114,7 @@ testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
 
 defaultConfig :: GameConfig
 defaultConfig = GameConfig 8 (Regular 3) White True Normal
-                           defaultMenConfig defaultKingConfig False False
+                           defaultMenConfig defaultKingConfig True False
 
 data GameState = GameState { gsField :: [Piece]
                            , gsRemove :: [Piece]
@@ -141,6 +143,10 @@ getWinner (Game cfg state) =
 
 getPiece :: Game -> Coord -> Maybe Piece
 getPiece (Game _ state) coord = find (\x -> (ppos x) == coord) (gsField state)
+
+willRemovePiece :: Game -> Coord -> Bool
+willRemovePiece (Game _ (GameState _ rm _)) coord =
+    (find (\x -> (ppos x) == coord) rm) /= Nothing
 
 getPiecesByColor :: Game -> Color -> [Piece]
 getPiecesByColor (Game _ state) cl = filter (\x -> (pcolor x) == cl) (gsField state)
@@ -176,7 +182,7 @@ getEatMoves game@(Game cfg _) pconf piece@(Piece _ cl from) first dir len1 len2 
     if inField cfg cpos && (Finite len1) <= (pcEatRadius pconf)
     then case getPiece game cpos of
            Nothing -> getEatMoves game pconf piece first dir (len1 + 1) 0 Nothing
-           (Just p) -> if pcolor p /= cl
+           (Just p) -> if pcolor p /= cl && (not $ willRemovePiece game cpos)
                        then getEatMoves game pconf piece first dir len1 1 (Just p)
                        else []
     else []
@@ -266,6 +272,13 @@ removePieces state@(GameState field _ _) False rm =
     cont [] p = True
     cont (first:rest) p = first /= p && cont rest p
 
+removePieceByCoord :: GameState -> Coord -> GameState
+removePieceByCoord state@(GameState field _ _) c =
+    state { gsField = filter (\x -> (ppos x) /= c) field }
+
+addPiece :: GameState -> Piece -> GameState
+addPiece state@(GameState field _ _) p = state { gsField = p : field }
+
 updatePiece :: Movement -> Bool -> Piece -> Piece
 updatePiece move@(Movement _ to _ bk _) False p =
     p { ptype = (pieceTpUpd (ptype p) bk)
@@ -281,7 +294,7 @@ execMovementImpl game@(Game cfg state) move@(Movement from to eaten bk _) piece@
     fullUpdPiece = (updatePiece move False piece)
 
     state1 = removePieces state (gcDeferRemoves cfg) eaten
-    state2 = removePieces state1 False [piece]
+    state2 = removePieceByCoord state1 (ppos piece)
     state3 = state2 { gsField = updatedPiece : (gsField state2)
                     , gsUpdPiece = case gsUpdPiece state2 of
                                      (Just p) -> Just $ p { ppos = to }
@@ -297,6 +310,16 @@ execMovement game@(Game cfg state) move@(Movement from _ eaten bk _) =
 
 unexecMovement :: Game -> Movement -> Game
 unexecMovement g@(Game _ state) _ = g -- TODO
+
+finishTurn :: Game -> Game
+finishTurn game@(Game cfg state@(GameState field rm prepl)) =
+    Game cfg remState { gsRemove = []
+                      , gsUpdPiece = Nothing }
+  where
+    replState = case prepl of
+                  Nothing -> state
+                  (Just p) -> addPiece (removePieceByCoord state (ppos p)) p
+    remState = removePieces replState False (gsRemove replState)
 
 makeMove :: Game -> CoordPair -> Bool -> Game
 makeMove g@(Game cfg state) cp first =

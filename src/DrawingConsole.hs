@@ -12,21 +12,30 @@ getPieceSym White King = '@'
 getPieceSym Black Man = 'x'
 getPieceSym Black King = '%'
 
+deferRmSym = '.'
+deferBKSym = '*'
+
 makeCell :: Game -> Int -> Int -> String
-makeCell g row col =
-    " " ++ [(makeCellImpl $ getPiece g (Coord row col))] ++ " |"
+makeCell game row col =
+    [' ', cellSym, deferSym, '|']
   where
     makeCellImpl :: Maybe Piece -> Char
     makeCellImpl (Just p) = getPieceSym (pcolor p) (ptype p)
     makeCellImpl Nothing = ' '
 
+    coord = (Coord row col)
+    cellSym = makeCellImpl $ getPiece game coord
+    deferSym = if willRemovePiece game coord
+               then deferRmSym
+               else ' '
+
 makeRow :: Game -> Int -> String
-makeRow g@(Game cfg _) n =
+makeRow game@(Game cfg _) n =
     "   " ++ makeBorder boardSize ++ "\n" ++
     " " ++ (show (n + 1)) ++ " |" ++ cells ++ "\n"
   where
     boardSize = gcBoardSize cfg
-    cells = (concat [makeCell g n k | k <- [0, 1 .. boardSize - 1]])
+    cells = (concat [makeCell game n k | k <- [0, 1 .. boardSize - 1]])
 
 makeColLabels :: Int -> String
 makeColLabels n = concat ["  " ++ [toLabel k] ++ " " | k <- [0, 1 .. n-1]]
@@ -35,16 +44,16 @@ makeColLabels n = concat ["  " ++ [toLabel k] ++ " " | k <- [0, 1 .. n-1]]
     toLabel k = toEnum (k + fromEnum 'A')
 
 makeField :: Game -> String
-makeField g@(Game cfg _) =
+makeField game@(Game cfg _) =
     rows ++ "   " ++ (makeBorder boardSize) ++ "\n" ++
     "   " ++ (makeColLabels boardSize)
   where
     boardSize = gcBoardSize cfg
-    rows = concat [makeRow g n | n <- [boardSize-1, boardSize-2 .. 0]]
+    rows = concat [makeRow game n | n <- [boardSize-1, boardSize-2 .. 0]]
 
 repaint :: Game -> IO ()
-repaint g@(Game cfg _) = do
-    putStrLn $ makeField g
+repaint game@(Game cfg _) = do
+    putStrLn $ makeField game
   where
     boardSize = gcBoardSize cfg
 

@@ -10,7 +10,8 @@ main :: IO ()
 main = do
 		--cp <- waitForMovement player1 game
 		--putStrLn $ show $ cp
-		run cfg player1 player2 drawing
+		winner <- run cfg player1 player2 drawing
+		putStrLn $ (show winner) ++ " player wins!"
 	where
 		cfg = defaultConfig
 		game = createGame cfg

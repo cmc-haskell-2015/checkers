@@ -8,7 +8,8 @@ import Kernel( Game(Game), getPiece
              , CoordPair(CoordPair)
              , Piece, pcolor
              , Movement, mfrom, mto
-             , getMovesByCoord )
+             , getMovesByCoord
+             , getMovesByColor )
 import PlayerBase ( Player(Player) )
 
 chr2col :: GameConfig -> Char -> Maybe Int
@@ -87,10 +88,16 @@ showMovesForCoord game color c first =
     moves = getMovesByCoord game c first
     smoves = [(coord2str c) ++ "-" ++ (coord2str (mto m)) ++ "\n" | m <- moves]
 
-showMoves :: Game -> Color -> Maybe Coord -> Maybe Coord -> IO ()
-showMoves game color (Just c) fr = showMovesForCoord game color c (fr == Nothing)
-showMoves game color Nothing fr@(Just c) = showMovesForCoord game color c False
-showMoves _ _ Nothing Nothing = return ()
+showCoordMoves :: Game -> Color -> Maybe Coord -> Maybe Coord -> IO ()
+showCoordMoves game color (Just c) fr = showMovesForCoord game color c (fr == Nothing)
+showCoordMoves game color Nothing fr@(Just c) = showMovesForCoord game color c False
+showCoordMoves _ _ Nothing Nothing = return ()
+
+showColorMoves :: Game -> Color -> IO ()
+showColorMoves game color = putStrLn $ concat smoves
+  where
+    moves = getMovesByColor game color
+    smoves = [(coord2str (mfrom m)) ++ "-" ++ (coord2str (mto m)) ++ "\n" | m <- moves]
 
 badInput :: Game -> Color -> Maybe Coord -> String -> IO [CoordPair]
 badInput game color c s = do
@@ -132,7 +139,10 @@ checkFirst (Just c1) ((Just c2):_) = (c1 == c2)
 
 processLine :: Game -> Color -> Maybe Coord -> String -> IO [CoordPair]
 processLine game@(Game cfg _) color c ('m':s) = do
-    showMoves game color (str2coord cfg (strip s)) c
+    showCoordMoves game color (str2coord cfg (strip s)) c
+    waitForMovement game color c
+processLine game@(Game cfg _) color c "cm" = do
+    showColorMoves game color
     waitForMovement game color c
 processLine game@(Game cfg _) color c s =
     if length splitted < 2
