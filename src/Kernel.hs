@@ -3,8 +3,17 @@ module Kernel ( PieceType(Man, King)
               , Coord(Coord), crow, ccol
               , Piece(Piece), ptype, pcolor, ppos
               , CoordPair(CoordPair), cpfrom, cpto
-              , Movement, mfrom, mto, meaten, mbecomeKing, mfinal, mfirst
-              , GameConfig(GameConfig), gcBoardSize, gcFirstColor, defaultConfig
+              , Movement, mfrom, mto, meaten, mbecomeKing, mfirst
+              , Infinitable(Finite, Infinity)
+              , Direction
+              , PieceConfig(PieceConfig), pcMoveDirs, pcEatDirs, pcMoveRadius,
+                                          pcEatRadius, pcAfterEatRadius
+              , GameInitStateGen
+              , GameInitStateType(Regular, Inversed, Custom)
+              , GameConfig(GameConfig), gcBoardSize, gcInitState, gcFirstColor,
+                                        gcGreedy, gcWinner, gcMenConfig,
+                                        gcKingConfig
+              , defaultMenConfig, defaultKingConfig, defaultConfig
               , GameState
               , Game(Game), gcfg, gstate
               , getWinner
@@ -21,6 +30,8 @@ module Kernel ( PieceType(Man, King)
               , makeMove
               , initState
               , createGame ) where
+
+import Data.List(find)
 
 data PieceType = Man | King deriving (Show, Eq)
 
@@ -49,17 +60,64 @@ data Movement = Movement { mfrom :: Coord
                          , mto :: Coord
                          , meaten :: [Piece]
                          , mbecomeKing :: Bool
-                         , mfinal :: Bool
                          , mfirst :: Bool } deriving (Show, Eq)
 
+data WinnerType = Normal | Reversed deriving (Show, Eq)
+
+data Infinitable a = Finite a | Infinity deriving (Eq, Show)
+
+instance Ord a => Ord (Infinitable a) where
+    compare Infinity Infinity = EQ
+    compare Infinity _ = GT
+    compare _ Infinity = LT
+    compare (Finite x) (Finite y) = compare x y
+type Direction = Coord
+data PieceConfig = PieceConfig { pcMoveDirs :: [Direction]
+                               , pcEatDirs :: [Direction]
+                               , pcMoveRadius :: Infinitable Int
+                               , pcEatRadius :: Infinitable Int
+                               , pcAfterEatRadius :: Infinitable Int }
+
+defaultMenConfig :: PieceConfig
+defaultMenConfig =
+    PieceConfig [(Coord 1 (-1)), (Coord 1 1)]
+                [(Coord (-1) (-1)), (Coord (-1) 1), (Coord 1 (-1)), (Coord 1 1)]
+                (Finite 1) (Finite 1) (Finite 1)
+
+defaultKingConfig :: PieceConfig
+defaultKingConfig =
+    PieceConfig [(Coord (-1) (-1)), (Coord (-1) 1), (Coord 1 (-1)), (Coord 1 1)]
+                [(Coord (-1) (-1)), (Coord (-1) 1), (Coord 1 (-1)), (Coord 1 1)]
+                Infinity Infinity Infinity
+
+--                   board size
+type GameInitStateGen = Int -> Coord -> Maybe Color
+data GameInitStateType = Regular Int | Inversed Int | Custom GameInitStateGen
 data GameConfig = GameConfig { gcBoardSize :: Int
+                             , gcInitState :: GameInitStateType
                              , gcFirstColor :: Color
-                             , isGreedy :: Bool}
+                             , gcGreedy :: Bool
+                             , gcWinner :: WinnerType
+                             , gcMenConfig :: PieceConfig
+                             , gcKingConfig :: PieceConfig
+                             , gcDeferRemoves :: Bool
+                             , gcDeferBecomeKing :: Bool }
+
+testInitState :: GameInitStateGen
+testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
+                    then Just White
+                    else if c == (Coord 2 5) || c == (Coord 5 5)
+                    then Just Black
+                    else Nothing
 
 defaultConfig :: GameConfig
-defaultConfig = GameConfig 8 White True
+defaultConfig = GameConfig 8 (Regular 3) White True Normal
+                           defaultMenConfig defaultKingConfig False False
 
-type GameState = [Piece]
+data GameState = GameState { gsField :: [Piece]
+                           , gsRemove :: [Piece]
+                           , gsUpdPiece :: Maybe Piece }
+
 data Game = Game { gcfg :: GameConfig
                  , gstate :: GameState }
 
@@ -67,119 +125,98 @@ boardSize :: Int
 boardSize = 8
 
 piecesCount :: GameState -> Color -> Int
-piecesCount state cl = length $ filter (\x -> (pcolor x) == cl) state
+piecesCount (GameState field _ _) cl =
+    length $ filter (\x -> (pcolor x) == cl) field
 
 getWinner :: Game -> Maybe Color
-getWinner (Game _ state) = let bcount = piecesCount state Black
-                               wcount = piecesCount state White
-                           in if bcount > 0 && wcount > 0
-                              then Nothing
-                              else if bcount == 0
-                              then Just White
-                              else Just Black
+getWinner (Game cfg state) =
+    if (bcount > 0) == (wcount > 0)
+    then Nothing
+    else if (bcount > 0 && (gcWinner cfg) == Normal) ||
+            (wcount > 0 && (gcWinner cfg) == Reversed)
+    then Just Black
+    else Just White
+  where bcount = piecesCount state Black
+        wcount = piecesCount state White
 
 getPiece :: Game -> Coord -> Maybe Piece
-getPiece (Game _ []) _ = Nothing
-getPiece (Game cfg (p @ (Piece _ _ pc):rest)) c =
-  if pc == c
-  then Just p
-  else getPiece (Game cfg rest) c
+getPiece (Game _ state) coord = find (\x -> (ppos x) == coord) (gsField state)
 
 getPiecesByColor :: Game -> Color -> [Piece]
-getPiecesByColor (Game _ state) cl = filter (\x -> (pcolor x) == cl) state
-
-
-drow :: Color -> Int
-drow Black = -1
-drow _ = 1
+getPiecesByColor (Game _ state) cl = filter (\x -> (pcolor x) == cl) (gsField state)
 
 lastrow :: GameConfig -> Color -> Int
 lastrow _ Black = 0
 lastrow cfg _ = (gcBoardSize cfg) - 1
 
-getSimpleMovement :: Game -> Piece -> Coord -> Bool -> [Movement]
-getSimpleMovement g@(Game cfg _) p@(Piece tp cl fc) rc@(Coord row col) first =
-  if row >= 0 && row < (gcBoardSize cfg) &&
-     col >= 0 && col < (gcBoardSize cfg) &&
-     (getPiece g rc) == Nothing && first
-  then [Movement fc rc [] (pieceTpChange tp (row == lastrow cfg cl)) True first]
-  else []
+getPos :: Coord -> Direction -> Int -> Coord
+getPos (Coord row col) (Coord drow dcol) len = Coord (row + len*drow) (col + len*dcol)
 
-eatThisPiece :: Piece -> Maybe Piece -> [Piece]
-eatThisPiece (Piece _ cl1 _) (Just p@(Piece _ cl2 _)) = if cl1 == cl2
-                                                        then []
-                                                        else [p]
-eatThisPiece _ Nothing = []
+inField :: GameConfig -> Coord -> Bool
+inField cfg (Coord row col) = row >= 0 && row < (gcBoardSize cfg) &&
+                              col >= 0 && col < (gcBoardSize cfg)
 
-getComplexMovement :: Game -> Piece -> Coord -> Coord -> Bool -> [Movement]
-getComplexMovement g@(Game cfg _) p@(Piece tp cl fc) tc rc@(Coord row col) first =
-  let tpiece = getPiece g tc
-      eaten = (eatThisPiece p tpiece)
-  in
-    if row >= 0 && row < (gcBoardSize cfg) &&
-       col >= 0 && col < (gcBoardSize cfg) &&
-       tpiece /= Nothing &&
-       (getPiece g rc) == Nothing &&
-       length eaten > 0
-    then
-      [Movement fc rc eaten
-          (pieceTpChange tp (row == lastrow cfg cl)) False first]
+isLastrow :: GameConfig -> Color -> Coord -> Bool
+isLastrow cfg color (Coord row col) = (lastrow cfg color) == row
+
+getSimpleMoves :: Game -> PieceConfig -> Piece -> Direction -> Int -> [Movement]
+getSimpleMoves game@(Game cfg _) pconf piece@(Piece tp color from) dir len =
+    if inField cfg cpos && (Finite len) <= (pcMoveRadius pconf) &&
+       getPiece game cpos == Nothing
+    then (Movement from cpos [] becomeKing True) :
+         getSimpleMoves game pconf piece dir (len + 1)
     else []
+  where
+    cpos = (getPos from dir len)
+    becomeKing = pieceTpChange tp (isLastrow cfg color cpos)
 
+getEatMoves :: Game -> PieceConfig -> Piece -> Bool -> Direction ->
+               Int -> Int -> Maybe Piece -> [Movement]
+getEatMoves game@(Game cfg _) pconf piece@(Piece _ cl from) first dir len1 len2 Nothing =
+    if inField cfg cpos && (Finite len1) <= (pcEatRadius pconf)
+    then case getPiece game cpos of
+           Nothing -> getEatMoves game pconf piece first dir (len1 + 1) 0 Nothing
+           (Just p) -> if pcolor p /= cl
+                       then getEatMoves game pconf piece first dir len1 1 (Just p)
+                       else []
+    else []
+  where
+    cpos = (getPos from dir (len1 + len2))
+getEatMoves game@(Game cfg _) pconf piece@(Piece tp cl from) first dir len1 len2 (Just eaten) =
+    if inField cfg cpos && (Finite len2) <= (pcAfterEatRadius pconf) &&
+       getPiece game cpos == Nothing
+    then  (Movement from cpos [eaten] becomeKing first) :
+          getEatMoves game pconf piece first dir len1 (len2 + 1) (Just eaten)
+    else []
+  where
+    cpos = (getPos from dir (len1 + len2))
+    becomeKing = pieceTpChange tp (isLastrow cfg cl cpos)
 
-getManMoves :: Game -> Piece -> Bool -> [Movement]
-getManMoves g p@(Piece _ cl pos@(Coord row col)) first =
-  (getSimpleMovement g p (Coord (row + (drow cl)) (col - 1)) first) ++
-  (getSimpleMovement g p (Coord (row + (drow cl)) (col + 1)) first) ++
-  (getComplexMovement g p (Coord (row - 1) (col - 1))
-                          (Coord (row - 2) (col - 2)) first) ++
-  (getComplexMovement g p (Coord (row - 1) (col + 1))
-                          (Coord (row - 2) (col + 2)) first) ++
-  (getComplexMovement g p (Coord (row + 1) (col - 1))
-                          (Coord (row + 2) (col - 2)) first) ++
-  (getComplexMovement g p (Coord (row + 1) (col + 1))
-                          (Coord (row + 2) (col + 2)) first)
+updDir :: Color -> Direction -> Direction
+updDir Black (Coord drow dcol) = Coord (-drow) dcol
+updDir _ d = d
 
-goKing :: Game -> Piece -> Coord -> Int -> Int -> Bool -> [Movement]
-goKing g@(Game cfg _) p@(Piece _ _ pos) curPos@(Coord row col) dx dy first =
-  if row >= 0 && row < (gcBoardSize cfg) &&
-     col >= 0 && col < (gcBoardSize cfg) &&
-     (getPiece g curPos) == Nothing
-  then
-    if first == True then
-      [Movement pos curPos [] False True first] ++ (goKing g p (Coord (row + dx) (col + dy)) dx dy first)
-    else
-      (goKing g p (Coord (row + dx) (col + dy)) dx dy first)
-  else
-    let tpiece = (getPiece g curPos)
-        eaten = (eatThisPiece p tpiece)
-    in
-      if (row + dx) >= 0 && (row + dx) < (gcBoardSize cfg) &&
-        (col + dy) >= 0 && (col + dy) < (gcBoardSize cfg) &&
-        (getPiece g curPos) /= Nothing &&
-        (getPiece g (Coord (row + dx) (col + dy))) == Nothing &&
-        length eaten > 0
-      then
-        [Movement pos (Coord (row + dx) (col + dy)) eaten False False first]
-      else
-        []
-
-getKingMoves :: Game -> Piece -> Bool -> [Movement]
-getKingMoves g p@(Piece _ _ pos@(Coord row col)) first =
-  (goKing g p (Coord (row + 1) (col + 1)) 1 1 first) ++
-  (goKing g p (Coord (row + 1) (col - 1)) 1 (-1) first) ++
-  (goKing g p (Coord (row - 1) (col + 1)) (-1) 1 first) ++
-  (goKing g p (Coord (row - 1) (col - 1)) (-1) (-1) first)
-
-
-getPieceMoves :: Game -> Maybe Piece -> Bool -> [Movement]
-getPieceMoves g (Just p@(Piece tp _ _)) first = case tp of
-                                                  Man -> getManMoves g p first
-                                                  King -> getKingMoves g p first
-getPieceMoves _ Nothing _ = []
+getPieceMoves :: Game -> Piece -> Bool -> [Movement]
+getPieceMoves game@(Game cfg _) piece@(Piece tp color _) first =
+    simpleMoves ++ eatMoves
+  where
+    pconf = case tp of
+              Man -> (gcMenConfig cfg)
+              King -> (gcKingConfig cfg)
+    simpleMoves =
+        if first
+        then concat $ [getSimpleMoves game pconf piece (updDir color dir) 1
+                          | dir <- pcMoveDirs pconf]
+        else []
+    eatMoves = concat $ [getEatMoves game pconf piece first (updDir color dir) 1 0 Nothing
+                          | dir <- pcEatDirs pconf]
 
 getAllMovesByCoord :: Game -> Coord -> Bool -> [Movement]
-getAllMovesByCoord g c first = getPieceMoves g (getPiece g c) first
+getAllMovesByCoord g c first =
+    case piece of
+      Nothing -> []
+      (Just p) -> getPieceMoves g p first
+  where piece = (getPiece g c)
 
 getAllMovesByColor :: Game -> Color -> [Movement]
 getAllMovesByColor g cl =
@@ -198,7 +235,7 @@ getMovesByColor g cl = let moves = getAllMovesByColor g cl in
   else
     moves
 
-getMovesByCoord :: Game -> Coord -> Bool -> [Movement]   
+getMovesByCoord :: Game -> Coord -> Bool -> [Movement]
 getMovesByCoord g c first =
   let moves = getAllMovesByCoord g c first
       Just p@(Piece _ cl _) = (getPiece g c)
@@ -208,7 +245,7 @@ getMovesByCoord g c first =
       filterEatingMoves moves
     else
       moves
-  
+
 findMove :: Game -> CoordPair -> Bool -> Maybe Movement
 findMove g (CoordPair from to) first =
   let move = filter (\x -> (mto x) == to) $ getMovesByCoord g from first
@@ -219,26 +256,43 @@ findMove g (CoordPair from to) first =
 validMove :: Game -> CoordPair -> Bool -> Bool
 validMove g cp first = (findMove g cp first) /= Nothing
 
-removePieces :: GameState -> [Coord] -> GameState
-removePieces state [] = state
-removePieces state coords = filter (cont coords) state
+removePieces :: GameState -> Bool -> [Piece] -> GameState
+removePieces state@(GameState field _ _) True rm =
+    state { gsRemove = (gsRemove state) ++ rm }
+removePieces state@(GameState field _ _) False rm =
+    state { gsField = filter (cont rm) field }
   where
+    cont :: [Piece] -> Piece -> Bool
     cont [] p = True
-    cont (first:rest) p = first /= (ppos p) && cont rest p
+    cont (first:rest) p = first /= p && cont rest p
 
-updatePiece :: Movement -> Piece -> Piece
-updatePiece move@(Movement _ to _ bk _ _) p =
+updatePiece :: Movement -> Bool -> Piece -> Piece
+updatePiece move@(Movement _ to _ bk _) False p =
     p { ptype = (pieceTpUpd (ptype p) bk)
       , ppos = to }
+updatePiece move@(Movement _ to _ bk _) True p =
+    p { ppos = to }
+
+execMovementImpl :: Game -> Movement -> Piece -> Game
+execMovementImpl game@(Game cfg state) move@(Movement from to eaten bk _) piece@(Piece tp _ _) =
+    game { gstate = state3 }
+  where
+    updatedPiece = (updatePiece move (gcDeferBecomeKing cfg) piece)
+    fullUpdPiece = (updatePiece move False piece)
+
+    state1 = removePieces state (gcDeferRemoves cfg) eaten
+    state2 = removePieces state1 False [piece]
+    state3 = state2 { gsField = updatedPiece : (gsField state2)
+                    , gsUpdPiece = case gsUpdPiece state2 of
+                                     (Just p) -> Just $ p { ppos = to }
+                                     Nothing -> Just fullUpdPiece }
 
 execMovement :: Game -> Movement -> Game
-execMovement game@(Game cfg state) move@(Movement from _ eaten _ _ _) =
+execMovement game@(Game cfg state) move@(Movement from _ eaten bk _) =
     case cpiece of
       Nothing -> game
-      (Just p) -> Game cfg ((updatePiece move p) : tempState)
+      (Just p) -> execMovementImpl game move p
   where
-    eatenc = map (\x -> (ppos x)) eaten
-    tempState = removePieces state ([from] ++ eatenc)
     cpiece = getPiece game from
 
 unexecMovement :: Game -> Movement -> Game
@@ -250,16 +304,40 @@ makeMove g@(Game cfg state) cp first =
       Nothing -> g
       (Just move) -> execMovement g move
 
-initState :: GameConfig -> GameState
-initState cfg = [(Piece Man White c) | c <- whitecoords] ++
-               [(Piece Man Black c) | c <- blackcoords]
+defaultPieceGen :: Int -> Int -> Int -> Coord -> Maybe Color
+defaultPieceGen boardSize mod_ n (Coord row col) =
+    if ((row + col) `mod` 2) /= mod_ ||
+       (row >= n && row < (boardSize - n))
+    then Nothing
+    else if row < n
+    then Just White
+    else Just Black
+
+makePiece :: GameConfig -> Coord -> Maybe Piece
+makePiece cfg coord = case colorGen coord of
+                        Nothing -> Nothing
+                        (Just c) -> Just $ Piece Man c coord
   where
-    whitecoords = [(Coord 0 col) | col <- [0, 2 .. 6]] ++
-                  [(Coord 1 col) | col <- [1, 3 .. 7]] ++
-                  [(Coord 2 col) | col <- [0, 2 .. 6]]
-    blackcoords = [(Coord 5 col) | col <- [1, 3 .. 7]] ++
-                  [(Coord 6 col) | col <- [0, 2 .. 6]] ++
-                  [(Coord 7 col) | col <- [1, 3 .. 7]]
+    boardSize = gcBoardSize cfg
+    colorGen = case gcInitState cfg of
+                 Regular n -> defaultPieceGen boardSize 0 n
+                 Inversed n -> defaultPieceGen boardSize 1 n
+                 Custom f -> f boardSize
+
+initState :: GameConfig -> GameState
+initState cfg =
+    GameState (toField [makePiece cfg (Coord row col) | row <- [0, 1 .. boardSize]
+                                                      , col <- [0, 1 .. boardSize]])
+              [] Nothing
+  where
+    boardSize = gcBoardSize cfg
+
+    toField :: [Maybe Piece] -> [Piece]
+    toField [] = []
+    toField (Nothing:rest) = toField rest
+    toField ((Just p):rest) = p:(toField rest)
+
+
 
 createGame :: GameConfig -> Game
 createGame cfg = Game cfg $ initState cfg
