@@ -44,7 +44,7 @@ processMoves env game color lastc (first:rest) =
   where
     move = findMove game first (lastc == Nothing)
     runNext :: Game -> Movement -> IO ()
-    runNext game_ m = if mfinal m
+    runNext game_ m = if (length $ meaten m) == 0
                       then makeTurn env game_ (nextColor color)
                       else processMoves env game_ color (Just $ mto m) rest
 
