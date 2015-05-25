@@ -14,7 +14,13 @@ nextColor _ = White
 
 data GameEnv = GameEnv { geBlackPlayer :: Player
                        , geWhitePlayer :: Player
-                       , geDrawing :: Drawing }
+                       , geDrawing :: [Drawing] }
+
+repaintAll :: Game -> [Drawing] -> IO ()
+repaintAll _ [] = return ()
+repaintAll game (first:rest) = do
+    repaint first game
+    repaintAll game rest
 
 getPlayer :: GameEnv -> Color -> Player
 getPlayer env cl = case cl of
@@ -22,18 +28,18 @@ getPlayer env cl = case cl of
                      White -> (geWhitePlayer env)
 
 invalidMove :: GameEnv -> Game -> Color  -> IO Color
-invalidMove env@(GameEnv _ _ drawing) game color = do
+invalidMove env game color = do
     badMovement (getPlayer env color)
     makeTurnImpl env game color Nothing
 
 makeTurn :: GameEnv -> Game -> Color -> IO Color
-makeTurn env@(GameEnv _ _ drawing) game color =
+makeTurn env@(GameEnv _ _ drawings) game color =
     case getWinner game of
       Nothing -> do
         invitePlayer (getPlayer env color) color
         makeTurnImpl env game color Nothing
       (Just winner) -> do
-        repaint drawing game
+        repaintAll game drawings
         return winner
 
 nextTurn :: GameEnv -> Game -> Color -> IO Color
@@ -62,14 +68,14 @@ processMoves2 env game color lastc = do
     processMoves env game color lastc moves
 
 makeTurnImpl :: GameEnv -> Game -> Color -> Maybe Coord -> IO Color
-makeTurnImpl env@(GameEnv _ _ drawing) game color lastc = do
-    repaint drawing game
+makeTurnImpl env@(GameEnv _ _ drawings) game color lastc = do
+    repaintAll game drawings
     if checkMovements game lastc
       then processMoves2 env game color lastc
       else nextTurn env game color
 
-run :: GameConfig -> Player -> Player -> Drawing -> IO Color
-run cfg bplayer wplayer drawing = do
-    makeTurn (GameEnv bplayer wplayer drawing) game (gcFirstColor cfg)
+run :: GameConfig -> Player -> Player -> [Drawing] -> IO Color
+run cfg bplayer wplayer drawings = do
+    makeTurn (GameEnv bplayer wplayer drawings) game (gcFirstColor cfg)
   where
     game = createGame cfg
