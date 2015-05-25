@@ -32,7 +32,9 @@ makeTurn env@(GameEnv _ _ drawing) game color =
       Nothing -> do
         invitePlayer (getPlayer env color) color
         makeTurnImpl env game color Nothing
-      (Just winner) -> return winner
+      (Just winner) -> do
+        repaint drawing game
+        return winner
 
 nextTurn :: GameEnv -> Game -> Color -> IO Color
 nextTurn env game color = makeTurn env (finishTurn game) (nextColor color)
@@ -43,14 +45,14 @@ checkMovements game (Just c) = (length $ getMovesByCoord game c False) > 0
 
 processMoves :: GameEnv -> Game -> Color -> Maybe Coord -> [CoordPair] -> IO Color
 processMoves env game color lastc [] = makeTurnImpl env game color lastc
-processMoves env game color lastc (first:rest) =
+processMoves env game@(Game cfg _) color lastc (first:rest) =
     case move of
       Nothing -> invalidMove env game color
       (Just m) -> runNext (execMovement game m) m
   where
     move = findMove game first (lastc == Nothing)
     runNext :: Game -> Movement -> IO Color
-    runNext game_ m = if (length $ meaten m) == 0
+    runNext game_ m = if (length $ meaten m) == 0 || (not $ gcEnableSeries cfg)
                       then nextTurn env game_ color
                       else processMoves env game_ color (Just $ mto m) rest
 
