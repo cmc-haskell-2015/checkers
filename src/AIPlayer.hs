@@ -22,6 +22,7 @@ data AIAttr = AIAttr { eatenPiece :: Int
          
                      
 data AIMovement =  AIMovement { attr :: AIAttr
+                              , attrEnemy :: AIAttr
                               , move :: CoordPair} deriving (Show, Eq)     
                               
 defaultAIAttrConfig :: AIAttr
@@ -31,13 +32,18 @@ defaultCoordPair :: CoordPair
 defaultCoordPair = CoordPair (Coord 0 0) (Coord 0 0)
 
 defaultAIMovementConfig :: AIMovement
-defaultAIMovementConfig = AIMovement defaultAIAttrConfig defaultCoordPair
+defaultAIMovementConfig = AIMovement defaultAIAttrConfig defaultAIAttrConfig defaultCoordPair
                   
 sumAttr :: AIMovement -> AIMovement -> AIMovement
-sumAttr p1@(AIMovement (AIAttr a b) cp1) p2@(AIMovement (AIAttr c d) _) = AIMovement (AIAttr (a + c) (b + d)) cp1
+sumAttr p1@(AIMovement (AIAttr a b) (AIAttr aE bE) cp1) p2@(AIMovement (AIAttr c d) (AIAttr cE dE)  _) =
+  AIMovement (AIAttr (a + c) (b + d)) (AIAttr (aE + cE) (bE + dE)) cp1
+
+sumAttrEnemy :: AIMovement -> AIMovement -> AIMovement
+sumAttrEnemy p1@(AIMovement (AIAttr a b) (AIAttr aE bE) cp1) p2@(AIMovement (AIAttr c d) (AIAttr cE dE)  _) =
+  AIMovement (AIAttr (a + cE) (b + dE)) (AIAttr (aE + c) (bE + d)) cp1  
 
 simpleMax :: AIMovement -> AIMovement -> AIMovement
-simpleMax p1@(AIMovement (AIAttr a b) _) p2@(AIMovement (AIAttr c d) _) =
+simpleMax p1@(AIMovement (AIAttr a b) (AIAttr aE bE) _) p2@(AIMovement (AIAttr c d) (AIAttr cE dE) _) =
   if (a > c) then
     p1
   else
@@ -68,8 +74,8 @@ getBestMovement lvl _ 1 g [] allMove =
 getBestMovement lvl deep cl g (cur@(Movement fr to eat isKing first):rest) allMove = 
   let 
     curHeldKing = if isKing then 1 else 0
-    addAIMovementHeldKing = AIMovement (AIAttr 0 curHeldKing) (CoordPair fr to) 
-    addAIMovementHeldKingAndEaten = AIMovement (AIAttr 1 curHeldKing) (CoordPair fr to) 
+    addAIMovementHeldKing = AIMovement (AIAttr 0 curHeldKing) (AIAttr 0 0) (CoordPair fr to) 
+    addAIMovementHeldKingAndEaten = AIMovement (AIAttr 1 curHeldKing) (AIAttr 0 0) (CoordPair fr to) 
     curDeep = if cl == 1 then deep else (deep - 1)
     Just p@(Piece _ color _) = (getPiece g fr) 
     curAIMovement =
@@ -80,7 +86,7 @@ getBestMovement lvl deep cl g (cur@(Movement fr to eat isKing first):rest) allMo
           addAIMovementHeldKing
       else
         if (length eat) == 0 then
-          sumAttr addAIMovementHeldKing (getBestMovement lvl curDeep (cl * (-1)) newGame (getMovesByColor newGame color) [])
+          sumAttrEnemy addAIMovementHeldKing (getBestMovement lvl curDeep (cl * (-1)) newGame (getMovesByColor newGame color) [])
         else
           sumAttr addAIMovementHeldKingAndEaten (getBestMovement lvl deep cl newGame (getMovesByCoord newGame to False) []) where
             newGame = 
@@ -97,10 +103,10 @@ getBestMovement lvl deep cl g (cur@(Movement fr to eat isKing first):rest) allMo
 waitForMovement :: Int -> Int -> Game -> Color -> Maybe Coord -> IO [CoordPair]
 waitForMovement lvl deep g cl Nothing = 
   return $ [pair] where
-    p@(AIMovement c1 pair) = getBestMovement lvl deep 1 g (getMovesByColor g cl) []
+    p@(AIMovement c1 cE pair) = getBestMovement lvl deep 1 g (getMovesByColor g cl) []
 waitForMovement lvl deep g cl (Just c) = 
   return $ [pair] where
-    p@(AIMovement c1 pair) = getBestMovement lvl deep 1 g (getMovesByCoord g c False) []
+    p@(AIMovement c1 cE pair) = getBestMovement lvl deep 1 g (getMovesByCoord g c False) []
 
 
 badMovement :: IO ()
