@@ -16,8 +16,8 @@ import Kernel( Game(Game), getPiece
              , execMovement)
 import PlayerBase ( Player(Player) )
 
-data AIAttr = AIAttr { eatenPiece :: Int
-                     , heldKing :: Int} deriving (Show, Eq)
+data AIAttr = AIAttr { eatenPiece :: Double
+                     , heldKing :: Double} deriving (Show, Eq)
 
          
                      
@@ -26,13 +26,15 @@ data AIMovement =  AIMovement { attr :: AIAttr
                               , move :: CoordPair} deriving (Show, Eq)     
                               
 defaultAIAttrConfig :: AIAttr
-defaultAIAttrConfig = AIAttr 0 0
+defaultAIAttrConfig = AIAttr (0) (0)
+
+
 
 defaultCoordPair :: CoordPair
 defaultCoordPair = CoordPair (Coord 0 0) (Coord 0 0)
 
 defaultAIMovementConfig :: AIMovement
-defaultAIMovementConfig = AIMovement defaultAIAttrConfig defaultAIAttrConfig defaultCoordPair
+defaultAIMovementConfig = AIMovement defaultAIAttrConfig (AIAttr (100) (100)) defaultCoordPair
                   
 sumAttr :: AIMovement -> AIMovement -> AIMovement
 sumAttr p1@(AIMovement (AIAttr a b) (AIAttr aE bE) cp1) p2@(AIMovement (AIAttr c d) (AIAttr cE dE)  _) =
@@ -54,23 +56,35 @@ simpleMax p1@(AIMovement (AIAttr a b) (AIAttr aE bE) _) p2@(AIMovement (AIAttr c
         p1
       else
         p2
+aver :: AIAttr -> AIAttr -> Double
+aver me@(AIAttr a b) enemy@(AIAttr c d) = (a + b * 8) / (a * b + 1) - ((c + d)) / (4 * c * d + 1)
+        
+mediumMax :: AIMovement -> AIMovement -> AIMovement
+mediumMax p1@(AIMovement me1@(AIAttr a b) enemy1@(AIAttr aE bE) _) p2@(AIMovement me2@(AIAttr c d) enemy2@(AIAttr cE dE) _) =
+    if (aver me1 enemy1) > (aver me2 enemy2) then
+      p1
+    else
+      p2
+  
+        
+ratingMe :: [AIMovement] -> Int -> AIMovement
+ratingMe [] _ = defaultAIMovementConfig
+ratingMe (cur:rest) lvl =
+  case lvl of 
+    1 -> simpleMax (ratingMe rest lvl ) cur
+    2 -> mediumMax (ratingMe rest lvl) cur
 
-simpleMe :: [AIMovement] -> AIMovement
-simpleMe [] = defaultAIMovementConfig
-simpleMe (cur:rest) = simpleMax (simpleMe rest) cur
-
-simpleEnemy :: [AIMovement] -> AIMovement
-simpleEnemy [] = defaultAIMovementConfig
-simpleEnemy (cur:rest) = simpleMax (simpleEnemy rest) cur
+ratingEnemy :: [AIMovement] -> Int -> AIMovement
+ratingEnemy [] _ = defaultAIMovementConfig
+ratingEnemy (cur:rest) lvl = 
+  case lvl of
+    1 -> simpleMax (ratingEnemy rest lvl) cur
+    2 -> mediumMax (ratingEnemy rest lvl) cur
 
 
 getBestMovement :: Int -> Int -> Int -> Game -> [Movement] -> [AIMovement] -> AIMovement 
-getBestMovement lvl _ (-1) g [] allMove = 
-  case lvl of
-    1 -> simpleEnemy allMove
-getBestMovement lvl _ 1 g [] allMove = 
-  case lvl of
-    1 -> simpleMe allMove
+getBestMovement lvl _ (-1) g [] allMove = ratingEnemy allMove lvl
+getBestMovement lvl _ 1 g [] allMove = ratingMe allMove lvl
 getBestMovement lvl deep cl g (cur@(Movement fr to eat isKing first):rest) allMove = 
   let 
     curHeldKing = if isKing then 1 else 0

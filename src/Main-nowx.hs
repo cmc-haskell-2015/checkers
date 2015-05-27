@@ -17,5 +17,5 @@ main = do
     cfg = defaultConfig
     game = createGame cfg
     player1 = createAIPlayer 1 2
-    player2 = createPlayerConsole
+    player2 = createPlayerConsole 
     drawing = createDrawingConsole
