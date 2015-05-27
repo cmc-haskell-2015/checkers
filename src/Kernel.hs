@@ -253,14 +253,18 @@ getMovesByColor g cl = let moves = getAllMovesByColor g cl in
 
 getMovesByCoord :: Game -> Coord -> Bool -> [Movement]
 getMovesByCoord g c first =
-  let moves = getAllMovesByCoord g c first
-      Just p@(Piece _ cl _) = (getPiece g c)
-      allMoves = getAllMovesByColor g cl
-  in
-    if (haveEating allMoves) then
-      filterEatingMoves moves
-    else
-      moves
+    case (getPiece g c) of
+      Nothing -> []
+      Just p -> getMovesByCoordImpl p
+  where
+    moves = getAllMovesByCoord g c first
+
+    getMovesByCoordImpl :: Piece -> [Movement]
+    getMovesByCoordImpl (Piece _ cl _) = if (haveEating allMoves)
+                            then filterEatingMoves moves
+                            else moves
+      where
+        allMoves = getAllMovesByColor g cl
 
 findMove :: Game -> CoordPair -> Bool -> Maybe Movement
 findMove g (CoordPair from to) first =
