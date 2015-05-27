@@ -8,7 +8,9 @@ import AIPlayer
 main :: IO ()
 main = do
 		winner <- run cfg player1 player2 [drawing]
-		putStrLn $ (show winner) ++ " player wins!"
+		case winner of
+	    	Winner color -> putStrLn $ (show color) ++ " player wins!"
+	    	DrawBy color -> putStrLn $ "It's a trap for " ++ (show color) ++ " player!"
 	where
 		cfg = defaultConfig
 		game = createGame cfg

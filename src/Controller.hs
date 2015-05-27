@@ -27,14 +27,14 @@ getPlayer env cl = case cl of
                      Black -> (geBlackPlayer env)
                      White -> (geWhitePlayer env)
 
-invalidMove :: GameEnv -> Game -> Color  -> IO Color
+invalidMove :: GameEnv -> Game -> Color -> IO Winner
 invalidMove env game color = do
     badMovement (getPlayer env color)
     makeTurnImpl env game color Nothing
 
-makeTurn :: GameEnv -> Game -> Color -> IO Color
+makeTurn :: GameEnv -> Game -> Color -> IO Winner
 makeTurn env@(GameEnv _ _ drawings) game color =
-    case getWinner game of
+    case getWinner game color of
       Nothing -> do
         invitePlayer (getPlayer env color) color
         makeTurnImpl env game color Nothing
@@ -42,14 +42,14 @@ makeTurn env@(GameEnv _ _ drawings) game color =
         repaintAll game drawings
         return winner
 
-nextTurn :: GameEnv -> Game -> Color -> IO Color
+nextTurn :: GameEnv -> Game -> Color -> IO Winner
 nextTurn env game color = makeTurn env (finishTurn game) (nextColor color)
 
 checkMovements :: Game -> Maybe Coord -> Bool
 checkMovements game Nothing = True
 checkMovements game (Just c) = (length $ getMovesByCoord game c False) > 0
 
-processMoves :: GameEnv -> Game -> Color -> Maybe Coord -> [CoordPair] -> IO Color
+processMoves :: GameEnv -> Game -> Color -> Maybe Coord -> [CoordPair] -> IO Winner
 processMoves env game color lastc [] = makeTurnImpl env game color lastc
 processMoves env game@(Game cfg _) color lastc (first:rest) =
     case move of
@@ -57,24 +57,24 @@ processMoves env game@(Game cfg _) color lastc (first:rest) =
       (Just m) -> runNext (execMovement game m) m
   where
     move = findMove game first (lastc == Nothing)
-    runNext :: Game -> Movement -> IO Color
+    runNext :: Game -> Movement -> IO Winner
     runNext game_ m = if (length $ meaten m) == 0 || (not $ gcEnableSeries cfg)
                       then nextTurn env game_ color
                       else processMoves env game_ color (Just $ mto m) rest
 
-processMoves2 :: GameEnv -> Game -> Color -> Maybe Coord -> IO Color
+processMoves2 :: GameEnv -> Game -> Color -> Maybe Coord -> IO Winner
 processMoves2 env game color lastc = do
     moves <- waitForMovement (getPlayer env color) game color lastc
     processMoves env game color lastc moves
 
-makeTurnImpl :: GameEnv -> Game -> Color -> Maybe Coord -> IO Color
+makeTurnImpl :: GameEnv -> Game -> Color -> Maybe Coord -> IO Winner
 makeTurnImpl env@(GameEnv _ _ drawings) game color lastc = do
     repaintAll game drawings
     if checkMovements game lastc
       then processMoves2 env game color lastc
       else nextTurn env game color
 
-run :: GameConfig -> Player -> Player -> [Drawing] -> IO Color
+run :: GameConfig -> Player -> Player -> [Drawing] -> IO Winner
 run cfg bplayer wplayer drawings = do
     makeTurn (GameEnv bplayer wplayer drawings) game (gcFirstColor cfg)
   where

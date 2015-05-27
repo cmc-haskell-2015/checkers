@@ -1,5 +1,6 @@
 module Kernel ( PieceType(Man, King)
               , Color(White, Black)
+              , Winner(Winner, DrawBy)
               , Coord(Coord), crow, ccol
               , Piece(Piece), ptype, pcolor, ppos
               , CoordPair(CoordPair), cpfrom, cpto
@@ -49,6 +50,7 @@ pieceTpChange _ True = True
 pieceTpChange _ _ = False
 
 data Color = White | Black deriving (Show, Eq)
+data Winner = Winner Color | DrawBy Color
 
 data Coord = Coord { crow :: Int
                    , ccol :: Int } deriving (Show, Eq)
@@ -140,14 +142,16 @@ piecesCount :: GameState -> Color -> Int
 piecesCount (GameState field _ _) cl =
     length $ filter (\x -> (pcolor x) == cl) field
 
-getWinner :: Game -> Maybe Color
-getWinner (Game cfg state) =
+getWinner :: Game -> Color -> Maybe Winner
+getWinner game@(Game cfg state) ccolor =
     if (bcount > 0) == (wcount > 0)
+    then if length (getMovesByColor game ccolor) > 0
     then Nothing
+    else Just $ DrawBy ccolor
     else if (bcount > 0 && (gcWinner cfg) == Normal) ||
             (wcount > 0 && (gcWinner cfg) == Reversed)
-    then Just Black
-    else Just White
+    then Just $ Winner Black
+    else Just $ Winner White
   where bcount = piecesCount state Black
         wcount = piecesCount state White
 
