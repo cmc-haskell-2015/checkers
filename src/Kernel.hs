@@ -114,6 +114,14 @@ testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
                     then Just Black
                     else Nothing
 
+testInitState2 :: GameInitStateGen
+testInitState2 _ c = if c == (Coord 2 1)
+                    then Just White
+                    else if c == (Coord 3 2)
+                    then Just Black
+                    else Nothing
+
+
 defaultConfig :: GameConfig
 defaultConfig = GameConfig 8 (Regular 3) White True Normal
                            defaultMenConfig defaultKingConfig True False True

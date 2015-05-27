@@ -1,31 +1,46 @@
-module Main where
+module Main( main ) where
 
-import Graphics.UI.WX
-import Graphics.UI.WXCore
-import Graphics.UI.WXCore.Layout
-import Graphics.UI.WXCore.WxcTypes
+import Control.Concurrent
+
+import qualified Graphics.UI.WX as Wx
+import qualified Graphics.UI.WXCore as Wx
+import qualified Graphics.UI.WXCore.Layout
+import qualified Graphics.UI.WXCore.WxcTypes
+
+import Kernel
+import PlayerBase
+import PlayerConsole
+import DrawingBase
+import DrawingConsole
+import DrawingWx
+import Controller
 
 main
-  = start gui
+  = Wx.start gui
+
+runGame :: Wx.Frame a -> GameConfig -> Player -> Player -> [Drawing] -> IO ()
+runGame win cfg player1 player2 drawings = do
+    winner <- run cfg player1 player2 drawings
+    putStrLn $ (show winner) ++ " player wins!"
+    return ()
 
 gui :: IO ()
 gui
   = do
-    f <- frame [ text := "wx test" ]
+    f <- Wx.frame [ Wx.text Wx.:= "wx test" ]
 
-    img <- bitmapCreateFromFile "resources/welcome.jpg"
-    bitmap <- staticBitmapCreate f 0 img rectNull 0
+    drawingWx <- createDrawingWx f defaultConfig
+    forkOS (runGame f cfg player1 player2 [drawingConsole, drawingWx])
 
-    btn <- button f [ text := "OK"
-                    , on command := onClick f ]
-
-    windowSetLayout f ( margin 10 $
-                        column 5 [ alignCenter $ stretch $ widget bitmap
-                                 , alignTopRight $ hstretch $ widget btn ])
     return ()
   where
-    onClick :: Frame a -> IO ()
+    onClick :: Wx.Frame a -> IO ()
     onClick f
       = do
-        close f
+        Wx.close f
         return ()
+
+    cfg = defaultConfig
+    player1 = createPlayerConsole
+    player2 = createPlayerConsole
+    drawingConsole = createDrawingConsole

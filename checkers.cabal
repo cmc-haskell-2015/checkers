@@ -28,6 +28,7 @@ executable checkers
                          wxc >=0.90,
                          wxcore >=0.90,
                          wx >=0.90
+    ghc-options:         -threaded
   else
     main-is:             Main-nowx.hs
     build-depends:       base >=4.6 && <4.8
