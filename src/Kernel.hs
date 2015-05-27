@@ -363,8 +363,8 @@ makePiece cfg coord = case colorGen coord of
 
 initState :: GameConfig -> GameState
 initState cfg =
-    GameState (toField [makePiece cfg (Coord row col) | row <- [0, 1 .. boardSize]
-                                                      , col <- [0, 1 .. boardSize]])
+    GameState (toField [makePiece cfg (Coord row col) | row <- [0, 1 .. boardSize - 1]
+                                                      , col <- [0, 1 .. boardSize - 1]])
               [] Nothing
   where
     boardSize = gcBoardSize cfg
