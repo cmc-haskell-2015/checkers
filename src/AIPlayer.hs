@@ -22,7 +22,7 @@ data AIAttr = AIAttr { eatenPiece :: Int
          
                      
 data AIMovement =  AIMovement { attr :: AIAttr
-                              , move :: CoordPair}      
+                              , move :: CoordPair} deriving (Show, Eq)     
                               
 defaultAIAttrConfig :: AIAttr
 defaultAIAttrConfig = AIAttr 0 0
@@ -34,17 +34,17 @@ defaultAIMovementConfig :: AIMovement
 defaultAIMovementConfig = AIMovement defaultAIAttrConfig defaultCoordPair
                   
 sumAttr :: AIMovement -> AIMovement -> AIMovement
-sumAttr p1@(AIMovement (AIAttr a b) cp1) p2@(AIMovement (AIAttr c d) _) = AIMovement (AIAttr (a + b) (c + d)) cp1
+sumAttr p1@(AIMovement (AIAttr a b) cp1) p2@(AIMovement (AIAttr c d) _) = AIMovement (AIAttr (a + c) (b + d)) cp1
 
 simpleMax :: AIMovement -> AIMovement -> AIMovement
 simpleMax p1@(AIMovement (AIAttr a b) _) p2@(AIMovement (AIAttr c d) _) =
-  if (a > b) then
+  if (a > c) then
     p1
   else
-    if (b > a) then
+    if (c > a) then
       p2
     else
-      if (c > d) then
+      if (b > d) then
         p1
       else
         p2
@@ -80,26 +80,27 @@ getBestMovement lvl deep cl g (cur@(Movement fr to eat isKing first):rest) allMo
           addAIMovementHeldKing
       else
         if (length eat) == 0 then
-          sumAttr addAIMovementHeldKing (getBestMovement lvl curDeep (cl * (-1)) newGame (getMovesByCoord newGame to False) [])
+          sumAttr addAIMovementHeldKing (getBestMovement lvl curDeep (cl * (-1)) newGame (getMovesByColor newGame color) [])
         else
-          sumAttr addAIMovementHeldKingAndEaten (getBestMovement lvl deep cl newGame (getMovesByColor newGame color) []) where
+          sumAttr addAIMovementHeldKingAndEaten (getBestMovement lvl deep cl newGame (getMovesByCoord newGame to False) []) where
             newGame = 
               if ((length eat) == 0) then
                 finishTurn (execMovement g cur)
               else
                 execMovement g cur
-  in
-    getBestMovement lvl deep cl g rest (allMove ++ [curAIMovement]) 
+  in 
+    getBestMovement lvl deep cl g rest (allMove ++ [curAIMovement]) where    
+    
     
   
                      
 waitForMovement :: Int -> Int -> Game -> Color -> Maybe Coord -> IO [CoordPair]
-waitForMovement lvl deep g cl Nothing =
+waitForMovement lvl deep g cl Nothing = 
   return $ [pair] where
-    p@(AIMovement _ pair) = getBestMovement lvl deep 1 g (getMovesByColor g cl) []
-waitForMovement lvl deep g cl (Just c) =
+    p@(AIMovement c1 pair) = getBestMovement lvl deep 1 g (getMovesByColor g cl) []
+waitForMovement lvl deep g cl (Just c) = 
   return $ [pair] where
-    p@(AIMovement _ pair) = getBestMovement lvl deep 1 g (getMovesByCoord g c False) []
+    p@(AIMovement c1 pair) = getBestMovement lvl deep 1 g (getMovesByCoord g c False) []
 
 
 badMovement :: IO ()

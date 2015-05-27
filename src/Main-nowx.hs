@@ -12,6 +12,6 @@ main = do
 	where
 		cfg = defaultConfig
 		game = createGame cfg
-		player1 = createPlayerConsole
+		player1 = createAIPlayer 1 2
 		player2 = createPlayerConsole
 		drawing = createDrawingConsole
