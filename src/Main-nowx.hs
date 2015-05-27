@@ -4,7 +4,7 @@ import Kernel
 import PlayerConsole
 import DrawingConsole
 import Controller
-
+import AIPlayer
 main :: IO ()
 main = do
 		winner <- run cfg player1 player2 [drawing]
