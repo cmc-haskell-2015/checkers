@@ -3,7 +3,7 @@ module Kernel ( PieceType(Man, King)
               , Coord(Coord), crow, ccol
               , Piece(Piece), ptype, pcolor, ppos
               , CoordPair(CoordPair), cpfrom, cpto
-              , Movement, mfrom, mto, meaten, mbecomeKing, mfirst
+              , Movement(Movement), mfrom, mto, meaten, mbecomeKing, mfirst
               , Infinitable(Finite, Infinity)
               , Direction
               , PieceConfig(PieceConfig), pcMoveDirs, pcEatDirs, pcMoveRadius,
