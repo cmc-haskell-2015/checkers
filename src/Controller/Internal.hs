@@ -13,11 +13,6 @@ import PlayerBase ( Player
 import DrawingBase ( Drawing
                    , repaint )
 
--- | Получить следующий цвет.
-nextColor :: Color -> Color
-nextColor White = Black
-nextColor _ = White
-
 -- | Окружение игры.
 data GameEnv = GameEnv
     { geBlackPlayer :: Player  -- ^ Чёрный игрок

@@ -3,7 +3,7 @@ Module      : Kernel.Internal
 Description : Реализация модуля с основными типами и функциями.
 License     : LGPLv3
 
-Базовый модуль - "Ядро" программы. Реализована бОльшая часть всех типов и функций, 
+Базовый модуль - "Ядро" программы. Реализована бОльшая часть всех типов и функций,
 необходимые для поддержания текущего состояния игры.
 -}
 module Kernel.Internal where
@@ -12,11 +12,11 @@ import Data.List(find)
 
 -- | Описание 2-х состояний шашки
 data PieceType =
-  Man -- ^ Простая шашка 
+  Man -- ^ Простая шашка
   | King -- ^ Дамка
   deriving (Show, Eq)
-  
--- | Обновление типа шашки, если она стала дамкой 
+
+-- | Обновление типа шашки, если она стала дамкой
 pieceTpUpd :: PieceType -> Bool -> PieceType
 pieceTpUpd King _ = King
 pieceTpUpd _ True = King
@@ -31,26 +31,31 @@ pieceTpChange _ _ = False
 -- | Тип цвета шашек
 data Color =
   White -- ^ Белый цвет, по умолчанию делает первый ход
-  | Black -- ^ Черный цвет, по умолчанию делает второй ход 
+  | Black -- ^ Черный цвет, по умолчанию делает второй ход
   deriving (Show, Eq)
-  
--- | Тип для победителя, содержит цвет победителя, или цвет игрока, у которого патовая ситуация. 
+
+-- | Получить следующий цвет.
+nextColor :: Color -> Color
+nextColor White = Black
+nextColor _ = White
+
+-- | Тип для победителя, содержит цвет победителя, или цвет игрока, у которого патовая ситуация.
 data Winner =
   Winner Color -- ^ Соответственно цвет победителя
   | DrawBy Color -- ^ Цвет игрока с патовой ситуацией
 
 -- | Тип координаты на доске
-data Coord = Coord { crow :: Int -- ^ Координата строки (y-координата) 
+data Coord = Coord { crow :: Int -- ^ Координата строки (y-координата)
                    , ccol :: Int -- ^ Координата столбца (x-координата)
                    }
                    deriving (Show, Eq)
-                   
+
 -- | Тип шашки
 data Piece = Piece { ptype :: PieceType -- ^ Состояние шашки
                    , pcolor :: Color -- ^ Цвет шашки
                    , ppos :: Coord -- ^ Координата шашки
                    } deriving (Show, Eq)
-                   
+
 -- | Тип 2-х координат, нужен для определения координат хода шашки
 data CoordPair = CoordPair { cpfrom :: Coord -- ^ Координата начала хода
                            , cpto :: Coord -- ^ Координата конца хода
@@ -59,37 +64,37 @@ data CoordPair = CoordPair { cpfrom :: Coord -- ^ Координата нача�
 -- | Тип одиночного хода шашки
 data Movement = Movement { mfrom :: Coord -- ^ Координата начала хода
                          , mto :: Coord -- ^ Координата конца хода
-                         , meaten :: [Piece] -- ^ Список съеденных за ход шашек 
+                         , meaten :: [Piece] -- ^ Список съеденных за ход шашек
                          , mbecomeKing :: Bool -- ^ Стала ли шашка дамкой за данный ход
                          , mfirst :: Bool -- ^ Первый ли ход в серии ходов данной шашкой
                          } deriving (Show, Eq)
 
 -- | Тип определения победителя, т.к. может быть случай поддавков
-data WinnerType = 
+data WinnerType =
   Normal -- ^ Стандартный тип победителя
   | Reversed -- ^ Поддавки
   deriving (Show, Eq)
 
--- | Специальный тип для определения конечного значения/бесконечности, нужен для ходов дамки  
-data Infinitable a = 
+-- | Специальный тип для определения конечного значения/бесконечности, нужен для ходов дамки
+data Infinitable a =
   Finite a -- ^ Конечный тип
   | Infinity -- ^ Бесконечность
   deriving (Eq, Show)
-  
+
 -- | Перегрузка оператора сравнение бесконечного типа
 instance Ord a => Ord (Infinitable a) where
     compare Infinity Infinity = EQ
     compare Infinity _ = GT
     compare _ Infinity = LT
     compare (Finite x) (Finite y) = compare x y
-    
--- | Тип вектора направления    
+
+-- | Тип вектора направления
 type Direction = Coord
 
 -- | Тип настроек шашек, объединенный для дамок и обычных шашек
 data PieceConfig = PieceConfig { pcMoveDirs :: [Direction] -- ^ Список возможных направлений ходов
                                , pcEatDirs :: [Direction] -- ^ Список направлений, в которых мы съедим шашку противника
-                               , pcMoveRadius :: Infinitable Int -- ^ Расстояние хода шашки 
+                               , pcMoveRadius :: Infinitable Int -- ^ Расстояние хода шашки
                                , pcEatRadius :: Infinitable Int -- ^ Расстояния для съедения вражеской шашки
                                , pcAfterEatRadius :: Infinitable Int -- ^ Расстояние для возможного хода после съедения вражеской шашки
                                }
@@ -107,14 +112,14 @@ englishMenConfig =
     PieceConfig [Coord 1 (-1), Coord 1 1]
                 [Coord 1 (-1), Coord 1 1]
                 (Finite 1) (Finite 1) (Finite 1)
-                
+
 -- | Конфигурация для "армянских" шашек, обычной шашки
 armenianMenConfig :: PieceConfig
 armenianMenConfig =
     PieceConfig [ Coord 0 (-1), Coord 1 (-1), Coord 1 0, Coord 1 1, Coord 0 1 ]
                 [ Coord 0 (-1), Coord 1 0, Coord 0 1 ]
                 (Finite 1) (Finite 1) (Finite 1)
-                
+
 -- | Конфигурация для "бразильских" шашек, обычной шашки
 brazilianMenConfig :: PieceConfig
 brazilianMenConfig =
@@ -122,14 +127,14 @@ brazilianMenConfig =
                 [Coord 1 (-1), Coord 1 1]
                 (Finite 1) (Finite 1) (Finite 1)
 
--- | Конфигурация для "русских" шашек, для дамки               
+-- | Конфигурация для "русских" шашек, для дамки
 russianKingConfig :: PieceConfig
 russianKingConfig =
     PieceConfig [ Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1]
                 [ Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1]
                 Infinity Infinity Infinity
 
--- | Конфигурация для "английских" шашек, для дамки                 
+-- | Конфигурация для "английских" шашек, для дамки
 englishKingConfig :: PieceConfig
 englishKingConfig =
     PieceConfig [ Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1 ]
@@ -138,7 +143,7 @@ englishKingConfig =
                 , Coord 1 (-1), Coord 1 0, Coord 1 1 ]
                 (Finite 1) (Finite 1) (Finite 1)
 
--- | Конфигурация для "американских" шашек, для дамки 
+-- | Конфигурация для "американских" шашек, для дамки
 armenianKingConfig :: PieceConfig
 armenianKingConfig =
     PieceConfig [ Coord (-1) (-1), Coord (-1) 0, Coord (-1) 1
@@ -154,14 +159,14 @@ type GameInitStateGen =
   Int -- ^ Размер доски
   -> Coord -- ^ Коордианата шашки
   -> Maybe Color -- ^ Возможный цвет шашки
-  
+
 -- | Тип для различных базовых состояний доски
 data GameInitStateType =
   Regular Int -- ^ Нормальный тип, размер доски
   | Inversed Int -- ^ Инверсированный тип, размер доски
   | Custom GameInitStateGen -- ^ Частный случай доски, нужен для тестирования
 
--- | Тип базовых настроек игры  
+-- | Тип базовых настроек игры
 data GameConfig = GameConfig { gcBoardSize :: Int -- ^ Размер доски
                              , gcInitState :: GameInitStateType -- ^ Базовое состояние доски
                              , gcFirstColor :: Color -- ^ Цвет игрока, который делает первый ход
@@ -171,10 +176,10 @@ data GameConfig = GameConfig { gcBoardSize :: Int -- ^ Размер доски
                              , gcKingConfig :: PieceConfig -- ^ Конфигурация дамки
                              , gcDeferRemoves :: Bool -- ^ Показывать ли промежуточные съедения шашек
                              , gcDeferBecomeKing :: Bool -- ^ Становится ли шашка дамкой сразу, в случае достижения границы доски в серии съедений
-                             , gcEnableSeries :: Bool -- ^ Разрешено ли несколько ходов за серию 
+                             , gcEnableSeries :: Bool -- ^ Разрешено ли несколько ходов за серию
                              }
 
--- | Первое тестовое начально состояние доски                            
+-- | Первое тестовое начально состояние доски
 testInitState :: GameInitStateGen
 testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
                     then Just White
@@ -182,7 +187,7 @@ testInitState _ c = if c == (Coord 2 1) || c == (Coord 1 4) || c == (Coord 5 2)
                     then Just Black
                     else Nothing
 
--- | Второе тестовое начальное состояние доски                    
+-- | Второе тестовое начальное состояние доски
 testInitState2 :: GameInitStateGen
 testInitState2 _ c = if c == (Coord 2 1)
                     then Just White
@@ -195,12 +200,12 @@ russianConfig :: GameConfig
 russianConfig = GameConfig 8 (Regular 3) White True Normal
                            russianMenConfig russianKingConfig True False True
 
--- | Конфигурация для "международных" шашек, настройки игры                           
+-- | Конфигурация для "международных" шашек, настройки игры
 internationalConfig :: GameConfig
 internationalConfig = GameConfig 10 (Regular 4) White True Normal
                                  russianMenConfig russianKingConfig True True True
 
--- | Конфигурация для "английских" шашек, настройки игры                                 
+-- | Конфигурация для "английских" шашек, настройки игры
 englishConfig :: GameConfig
 englishConfig = GameConfig 8 (Regular 3) Black True Normal
                            englishMenConfig englishKingConfig True False True
@@ -210,33 +215,33 @@ armenianConfig :: GameConfig
 armenianConfig = GameConfig 8 (Regular 3) White True Normal
                             armenianMenConfig armenianKingConfig False False True
 
--- | Конфигурация для "бразильских" шашек, настройки игры                            
+-- | Конфигурация для "бразильских" шашек, настройки игры
 brazilianConfig :: GameConfig
 brazilianConfig = GameConfig 8 (Inversed 3) White True Normal
                              brazilianMenConfig russianKingConfig True True True
 
--- | Конфигурация для "канадских" шашек, настройки игры                            
+-- | Конфигурация для "канадских" шашек, настройки игры
 kanadianConfig :: GameConfig
 kanadianConfig = GameConfig 12 (Regular 5) White True Normal
                                  russianMenConfig russianKingConfig True True True
 
--- | Конфигурация для поддавков, настройки игры                                 
+-- | Конфигурация для поддавков, настройки игры
 reversedConfig :: GameConfig
 reversedConfig = GameConfig 8 (Regular 3) White True Reversed
                             russianMenConfig russianKingConfig True False True
-                            
+
 -- | Тип текущего состояния игры
 data GameState = GameState { gsField :: [Piece] -- ^ Список всех шашек на доске
                            , gsRemove :: [Piece] -- ^ Список съеденных шашек
-                           , gsUpdPiece :: Maybe Piece -- ^ Шашка, на которую нужно будет заменить ту шашку, которая ходила. 
+                           , gsUpdPiece :: Maybe Piece -- ^ Шашка, на которую нужно будет заменить ту шашку, которая ходила.
                                                        -- ^ Необходимо для отложенного превращения в дамку
                            }
-                           
+
 -- | Главный тип игры
 data Game = Game { gcfg :: GameConfig -- ^ Настройки игры
                  , gstate :: GameState -- ^ Текущее состояние игры
                  }
-                 
+
 -- | Размер доски по-умолчанию
 boardSize :: Int
 boardSize = 8
@@ -260,7 +265,7 @@ getWinner game@(Game cfg state) ccolor =
   where bcount = piecesCount state Black
         wcount = piecesCount state White
 
--- | Получение шашки по координате        
+-- | Получение шашки по координате
 getPiece :: Game -> Coord -> Maybe Piece
 getPiece (Game _ state) coord = find (\x -> (ppos x) == coord) (gsField state)
 
@@ -269,7 +274,7 @@ willRemovePiece :: Game -> Coord -> Bool
 willRemovePiece (Game _ (GameState _ rm _)) coord =
     (find (\x -> (ppos x) == coord) rm) /= Nothing
 
--- | Получение списка шашек заданного цвета    
+-- | Получение списка шашек заданного цвета
 getPiecesByColor :: Game -> Color -> [Piece]
 getPiecesByColor (Game _ state) cl = filter (\x -> (pcolor x) == cl) (gsField state)
 
@@ -287,7 +292,7 @@ inField :: GameConfig -> Coord -> Bool
 inField cfg (Coord row col) = row >= 0 && row < (gcBoardSize cfg) &&
                               col >= 0 && col < (gcBoardSize cfg)
 
--- | Проверка, находимся ли мы на граничной строчке                              
+-- | Проверка, находимся ли мы на граничной строчке
 isLastrow :: GameConfig -> Color -> Coord -> Bool
 isLastrow cfg color (Coord row col) = (lastrow cfg color) == row
 
@@ -304,7 +309,7 @@ getSimpleMoves game@(Game cfg _) pconf piece@(Piece tp color from) dir len =
     cpos = (getPos from dir len)
     becomeKing = pieceTpChange tp (isLastrow cfg color cpos)
 
--- | Получение списка одиночных ходов со съедением шашки    
+-- | Получение списка одиночных ходов со съедением шашки
 getEatMoves :: Game -> PieceConfig -> Piece -> Bool -> Direction ->
                Int -> Int -> Maybe Piece -> [Movement]
 getEatMoves game@(Game cfg _) pconf piece@(Piece _ cl from) first dir len1 len2 Nothing =
@@ -327,8 +332,8 @@ getEatMoves game@(Game cfg _) pconf piece@(Piece tp cl from) first dir len1 len2
     cpos = (getPos from dir (len1 + len2))
     becomeKing = pieceTpChange tp (isLastrow cfg cl cpos)
 
-    
--- | Обновление направления по цвету    
+
+-- | Обновление направления по цвету
 updDir :: Color -> Direction -> Direction
 updDir Black (Coord drow dcol) = Coord (-drow) dcol
 updDir _ d = d
@@ -349,7 +354,7 @@ getPieceMoves game@(Game cfg _) piece@(Piece tp color _) first =
     eatMoves = concat $ [getEatMoves game pconf piece first (updDir color dir) 1 0 Nothing
                           | dir <- pcEatDirs pconf]
 
--- | Получение всех (и со съедением и без) одиночных ходов по координате                         
+-- | Получение всех (и со съедением и без) одиночных ходов по координате
 getAllMovesByCoord :: Game -> Coord -> Bool -> [Movement]
 getAllMovesByCoord g c first =
     case piece of
@@ -357,12 +362,12 @@ getAllMovesByCoord g c first =
       (Just p) -> getPieceMoves g p first
   where piece = (getPiece g c)
 
--- | Получение всех (и со съедением и без) одиночных ходов по цвету    
+-- | Получение всех (и со съедением и без) одиночных ходов по цвету
 getAllMovesByColor :: Game -> Color -> [Movement]
 getAllMovesByColor g cl =
     concat [getAllMovesByCoord g (ppos piece) True | piece <- getPiecesByColor g cl]
 
--- | Проверка списка ходов на ход со съедением     
+-- | Проверка списка ходов на ход со съедением
 haveEating :: [Movement] -> Bool
 haveEating ms = any (\m -> (length $ meaten m) > 0) ms
 
@@ -378,7 +383,7 @@ getMovesByColor g cl = let moves = getAllMovesByColor g cl in
   else
     moves
 
--- | Получение списка валидных ходов по координате, т.е. удаление обычных ходов, если мы обязаны съесть    
+-- | Получение списка валидных ходов по координате, т.е. удаление обычных ходов, если мы обязаны съесть
 getMovesByCoord :: Game -> Coord -> Bool -> [Movement]
 getMovesByCoord g c first =
     case (getPiece g c) of
@@ -394,8 +399,8 @@ getMovesByCoord g c first =
       where
         allMoves = getAllMovesByColor g cl
 
--- | Поиск полного хода по частичной информации о ходе        
-        
+-- | Поиск полного хода по частичной информации о ходе
+
 findMove :: Game -> CoordPair -> Bool -> Maybe Movement
 findMove g (CoordPair from to) first =
   let move = filter (\x -> (mto x) == to) $ getMovesByCoord g from first
@@ -403,7 +408,7 @@ findMove g (CoordPair from to) first =
      then Just $ head move
      else Nothing
 
--- | Проверка на корректность хода     
+-- | Проверка на корректность хода
 validMove :: Game -> CoordPair -> Bool -> Bool
 validMove g cp first = (findMove g cp first) /= Nothing
 
@@ -418,12 +423,12 @@ removePieces state@(GameState field _ _) False rm =
     cont [] p = True
     cont (first:rest) p = first /= p && cont rest p
 
--- | Удаление шашки с поля по координате    
+-- | Удаление шашки с поля по координате
 removePieceByCoord :: GameState -> Coord -> GameState
 removePieceByCoord state@(GameState field _ _) c =
     state { gsField = filter (\x -> (ppos x) /= c) field }
 
--- | Добавление новой шашки в состояние игры    
+-- | Добавление новой шашки в состояние игры
 addPiece :: GameState -> Piece -> GameState
 addPiece state@(GameState field _ _) p = state { gsField = p : field }
 
@@ -436,7 +441,7 @@ updatePiece move@(Movement _ to _ bk _) True p =
     p { ppos = to }
 
 -- | Реализация выполнения одиночного хода
-    
+
 execMovementImpl :: Game -> Movement -> Piece -> Game
 execMovementImpl game@(Game cfg state) move@(Movement from to eaten bk _) piece@(Piece tp _ _) =
     game { gstate = state3 }
@@ -458,7 +463,7 @@ execMovement game@(Game cfg state) move@(Movement from _ eaten bk _) =
   where
     cpiece = getPiece game from
 
--- | Отменить выполнение заданного одиночного хода    
+-- | Отменить выполнение заданного одиночного хода
 unexecMovement :: Game -> Movement -> Game
 unexecMovement g@(Game _ state) _ = g -- TODO
 
@@ -473,14 +478,14 @@ finishTurn game@(Game cfg state@(GameState field rm prepl)) =
                   (Just p) -> addPiece (removePieceByCoord state (ppos p)) p
     remState = removePieces replState False (gsRemove replState)
 
--- | Функция, которая вызывает выполнения одиночного хода    
+-- | Функция, которая вызывает выполнения одиночного хода
 makeMove :: Game -> CoordPair -> Bool -> Game
 makeMove g@(Game cfg state) cp first =
     case (findMove g cp first) of
       Nothing -> g
       (Just move) -> execMovement g move
 
--- | Генератор состояни шашек по-умолчанию      
+-- | Генератор состояни шашек по-умолчанию
 defaultPieceGen :: Int -> Int -> Int -> Coord -> Maybe Color
 defaultPieceGen boardSize mod_ n (Coord row col) =
     if ((row + col) `mod` 2) /= mod_ ||
@@ -489,7 +494,7 @@ defaultPieceGen boardSize mod_ n (Coord row col) =
     else if row < n
     then Just White
     else Just Black
-    
+
 -- | Функция, которая отвечает за определение шашки в состоянии игры
 makePiece :: GameConfig -> Coord -> Maybe Piece
 makePiece cfg coord = case colorGen coord of
@@ -501,7 +506,7 @@ makePiece cfg coord = case colorGen coord of
                  Regular n -> defaultPieceGen boardSize 0 n
                  Inversed n -> defaultPieceGen boardSize 1 n
                  Custom f -> f boardSize
-                 
+
 -- | Инициализация игры в начальном состоянии
 initState :: GameConfig -> GameState
 initState cfg =
