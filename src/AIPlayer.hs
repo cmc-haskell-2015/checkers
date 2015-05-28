@@ -65,7 +65,17 @@ mediumMax p1@(AIMovement me1@(AIAttr a b) enemy1@(AIAttr aE bE) _) p2@(AIMovemen
       p1
     else
       p2
-  
+
+logFrom :: AIAttr -> AIAttr -> Double
+logFrom me@(AIAttr a b) enemy@(AIAttr c d) = 2 * (logBase 2 (2 * a * (4 * b + 1) + a + b + 1)) - (logBase 10 (((c * d)) / (c + d + 1) + 1)) - d * 2
+      
+anotherMediumMax :: AIMovement -> AIMovement -> AIMovement
+anotherMediumMax p1@(AIMovement me1@(AIAttr a b) enemy1@(AIAttr aE bE) _) p2@(AIMovement me2@(AIAttr c d) enemy2@(AIAttr cE dE) _) =
+    if (logFrom me1 enemy1) > (logFrom me2 enemy2) then
+      p1
+    else
+      p2
+      
         
 ratingMe :: [AIMovement] -> Int -> AIMovement
 ratingMe [] _ = defaultAIMovementConfig
@@ -73,13 +83,14 @@ ratingMe (cur:rest) lvl =
   case lvl of 
     1 -> simpleMax (ratingMe rest lvl ) cur
     2 -> mediumMax (ratingMe rest lvl) cur
-
+    3 -> anotherMediumMax (ratingMe rest lvl) cur
 ratingEnemy :: [AIMovement] -> Int -> AIMovement
 ratingEnemy [] _ = defaultAIMovementConfig
 ratingEnemy (cur:rest) lvl = 
   case lvl of
     1 -> simpleMax (ratingEnemy rest lvl) cur
     2 -> mediumMax (ratingEnemy rest lvl) cur
+    3 -> anotherMediumMax (ratingEnemy rest lvl) cur
 
 
 getBestMovement :: Int -> Int -> Int -> Game -> [Movement] -> [AIMovement] -> AIMovement 
