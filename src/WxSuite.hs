@@ -93,19 +93,20 @@ paintPiecesEx mcolor isFirst game@(Game cfg _) dc rect = do
 paintPieces :: Game -> Wx.DC() -> Wx.Rect -> IO ()
 paintPieces game dc rect = paintPiecesEx Nothing True game dc rect
 
+-- | Подсветить клетки с координатами из заданного списка
+paintPossMovesImpl :: Wx.DC() -> Wx.Rect -> Coord -> [Coord] -> IO()
+paintPossMovesImpl _ _ _ [] = return ()
+paintPossMovesImpl dc rect bsize (first:rest) = do
+    img <- Wx.imageCreateFromFile "resources/moving.png"
+    paintAtCoord dc rect img bsize first
+    paintPossMovesImpl dc rect bsize rest
+
 -- | Нарисовать подсказки для ходов из заданного списка
 paintPossibleMoves :: [Movement] -> Game -> Wx.DC() -> Wx.Rect -> IO()
 paintPossibleMoves moves game@(Game cfg _) dc rect =
     paintPossMovesImpl dc rect bsize (map mto moves)
   where
     bsize = Coord (gcBoardSize cfg) (gcBoardSize cfg)
-
-    paintPossMovesImpl :: Wx.DC() -> Wx.Rect -> Coord -> [Coord] -> IO()
-    paintPossMovesImpl _ _ _ [] = return ()
-    paintPossMovesImpl dc rect bsize (first:rest) = do
-        img <- Wx.imageCreateFromFile "resources/moving.png"
-        paintAtCoord dc rect img bsize first
-        paintPossMovesImpl dc rect bsize rest
 
 -- | Нарисовать подсказки ко всем возможным перемещениям шашек заданного цвета
 paintPossibleMovesByColor :: Color -> Game -> Wx.DC() -> Wx.Rect -> IO()

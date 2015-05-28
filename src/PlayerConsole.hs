@@ -141,7 +141,7 @@ checkColor :: Game -> Color -> [Maybe Coord] -> Bool
 checkColor _ _ [] = False
 checkColor _ _ (Nothing:_) = False
 checkColor game color ((Just coord):_) =
-    case piece of
+    case getPiece game coord of
       Nothing -> False
       Just p -> (pcolor p) == color
 
