@@ -14,8 +14,8 @@ main = do
       DrawBy color -> putStrLn $ "It's a trap for " ++ (show color) ++ " player!"
     return ()
   where
-    cfg = defaultConfig
+    cfg = russianConfig
     game = createGame cfg
-    player1 = createAIPlayer 1 2 
-    player2 = createPlayerConsole 
+    player1 = createAIPlayer 1 2
+    player2 = createPlayerConsole
     drawing = createDrawingConsole

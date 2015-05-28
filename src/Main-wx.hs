@@ -29,7 +29,13 @@ runGame cfg player1 player2 drawings = do
 
 playerChoices = [ "Человек из консоли", "Человек с мышкой", "Компьютер"]
 aiLevels = [ "Глупый", "Средний", "Неплохой"]
-
+gameTypeChoices = [ "Русские"
+                  , "Международные"
+                  , "Английские"
+                  , "Армянские"
+                  , "Бразильские"
+                  , "Канадские"
+                  , "Поддавки" ]
 gui :: IO ()
 gui
   = do
@@ -38,8 +44,7 @@ gui
     set f [ layout := margin 10 $ fill $ stretch $ widget mainWidget ]
     welcomeWidget <- window mainWidget []
 
-    gameType <- radioBox welcomeWidget Vertical [ "Русские"
-                                                , "Международные" ]
+    gameType <- radioBox welcomeWidget Vertical gameTypeChoices
                                                 [ text := "Тип игры" ]
     playersWidget <- window welcomeWidget []
 
@@ -128,6 +133,17 @@ gui
          player1Combo player1AILevel player1AIDepth
          player2Combo player2AILevel player2AIDepth = do
 
+        gameTypeVal <- Wx.radioBoxGetSelection gameType
+        cfg <- case gameTypeVal of
+                 0 -> return russianConfig
+                 1 -> return internationalConfig
+                 2 -> return englishConfig
+                 3 -> return armenianConfig
+                 4 -> return brazilianConfig
+                 5 -> return kanadianConfig
+                 6 -> return reversedConfig
+                 otherwise -> return russianConfig
+
         player1ComboVal <- Wx.choiceGetSelection player1Combo
         player1AILevelVal <- (Wx.choiceGetSelection player1AILevel)
         player1AIDepthVal <- (Wx.spinCtrlGetValue player1AIDepth)
@@ -152,11 +168,3 @@ gui
         forkIO $ runGame cfg player1 player2 [drawing, createDrawingConsole]
         Wx.windowReLayout f
         return ()
-      where
-        cfg = defaultConfig
-
-    cfg = defaultConfig
-    player1 = createPlayerConsole
-    player2 = createPlayerConsole
-    playerAI = createAIPlayer 2 2
-    drawingConsole = createDrawingConsole

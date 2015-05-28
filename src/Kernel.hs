@@ -15,7 +15,8 @@ module Kernel ( PieceType(Man, King)
                                         gcGreedy, gcWinner, gcMenConfig,
                                         gcKingConfig, gcDeferRemoves,
                                         gcDeferBecomeKing, gcEnableSeries
-              , defaultMenConfig, defaultKingConfig, defaultConfig
+              , russianConfig, internationalConfig, englishConfig,
+                armenianConfig, brazilianConfig, kanadianConfig, reversedConfig
               , GameState
               , Game(Game), gcfg, gstate
               , getWinner
@@ -83,16 +84,52 @@ data PieceConfig = PieceConfig { pcMoveDirs :: [Direction]
                                , pcEatRadius :: Infinitable Int
                                , pcAfterEatRadius :: Infinitable Int }
 
-defaultMenConfig :: PieceConfig
-defaultMenConfig =
-    PieceConfig [(Coord 1 (-1)), (Coord 1 1)]
-                [(Coord (-1) (-1)), (Coord (-1) 1), (Coord 1 (-1)), (Coord 1 1)]
+russianMenConfig :: PieceConfig
+russianMenConfig =
+    PieceConfig [Coord 1 (-1), Coord 1 1]
+                [Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1]
                 (Finite 1) (Finite 1) (Finite 1)
 
-defaultKingConfig :: PieceConfig
-defaultKingConfig =
-    PieceConfig [(Coord (-1) (-1)), (Coord (-1) 1), (Coord 1 (-1)), (Coord 1 1)]
-                [(Coord (-1) (-1)), (Coord (-1) 1), (Coord 1 (-1)), (Coord 1 1)]
+englishMenConfig :: PieceConfig
+englishMenConfig =
+    PieceConfig [Coord 1 (-1), Coord 1 1]
+                [Coord 1 (-1), Coord 1 1]
+                (Finite 1) (Finite 1) (Finite 1)
+
+armenianMenConfig :: PieceConfig
+armenianMenConfig =
+    PieceConfig [ Coord 0 (-1), Coord 1 (-1), Coord 1 0, Coord 1 1, Coord 0 1 ]
+                [ Coord 0 (-1), Coord 1 0, Coord 0 1 ]
+                (Finite 1) (Finite 1) (Finite 1)
+
+brazilianMenConfig :: PieceConfig
+brazilianMenConfig =
+    PieceConfig [Coord 1 (-1), Coord 1 1]
+                [Coord 1 (-1), Coord 1 1]
+                (Finite 1) (Finite 1) (Finite 1)
+
+russianKingConfig :: PieceConfig
+russianKingConfig =
+    PieceConfig [ Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1]
+                [ Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1]
+                Infinity Infinity Infinity
+
+englishKingConfig :: PieceConfig
+englishKingConfig =
+    PieceConfig [ Coord (-1) (-1), Coord (-1) 1, Coord 1 (-1), Coord 1 1 ]
+                [ Coord (-1) (-1), Coord (-1) 0, Coord (-1) 1
+                , Coord 0 (-1), Coord 0 1
+                , Coord 1 (-1), Coord 1 0, Coord 1 1 ]
+                (Finite 1) (Finite 1) (Finite 1)
+
+armenianKingConfig :: PieceConfig
+armenianKingConfig =
+    PieceConfig [ Coord (-1) (-1), Coord (-1) 0, Coord (-1) 1
+                , Coord 0 (-1), Coord 0 1
+                , Coord 1 (-1), Coord 1 0, Coord 1 1 ]
+                [ Coord (-1) (-1), Coord (-1) 0, Coord (-1) 1
+                , Coord 0 (-1), Coord 0 1
+                , Coord 1 (-1), Coord 1 0, Coord 1 1 ]
                 Infinity Infinity Infinity
 
 --                   board size
@@ -124,9 +161,33 @@ testInitState2 _ c = if c == (Coord 2 1)
                     else Nothing
 
 
-defaultConfig :: GameConfig
-defaultConfig = GameConfig 8 (Regular 3) White True Normal
-                           defaultMenConfig defaultKingConfig True False True
+russianConfig :: GameConfig
+russianConfig = GameConfig 8 (Regular 3) White True Normal
+                           russianMenConfig russianKingConfig True False True
+
+internationalConfig :: GameConfig
+internationalConfig = GameConfig 10 (Regular 4) White True Normal
+                                 russianMenConfig russianKingConfig True True True
+
+englishConfig :: GameConfig
+englishConfig = GameConfig 8 (Regular 3) Black True Normal
+                           englishMenConfig englishKingConfig True False True
+
+armenianConfig :: GameConfig
+armenianConfig = GameConfig 8 (Regular 3) White True Normal
+                            armenianMenConfig armenianKingConfig False False True
+
+brazilianConfig :: GameConfig
+brazilianConfig = GameConfig 8 (Inversed 3) White True Normal
+                             brazilianMenConfig russianKingConfig True True True
+
+kanadianConfig :: GameConfig
+kanadianConfig = GameConfig 12 (Regular 5) White True Normal
+                                 russianMenConfig russianKingConfig True True True
+
+reversedConfig :: GameConfig
+reversedConfig = GameConfig 8 (Regular 3) White True Reversed
+                            russianMenConfig russianKingConfig True False True
 
 data GameState = GameState { gsField :: [Piece]
                            , gsRemove :: [Piece]
