@@ -33,3 +33,26 @@ $ cd checkers
 $ cabal configure -f usewx
 $ cabal run
 ```
+
+## Скриншоты
+
+![Настроечки](images/menu.png)
+Менюшка с настройками запуска игры
+
+![Игра в wx-интерфейсе](images/game.png)
+Игра в интерфейсе wx-widgets
+
+![Игра в wx-интерфейсе](images/game.png)
+Игра в тёплом ламповом интерфейсе
+
+## Документация
+
+Автоматическая документация кода сгенерирована при помощи [Haddock](https://www.haskell.org/haddock/).
+
+Онлайн документация доступна здесь: http://cmc-haskell-2015.github.io/checkers/docs/
+
+Локально документацию можно собрать, запустив простую команду:
+
+```
+$ cabal haddock
+```
