@@ -309,14 +309,13 @@ execMovementImpl game@(Game cfg state) move@(Movement from to eaten bk _) piece@
     game { gstate = state3 }
   where
     updatedPiece = (updatePiece move (gcDeferBecomeKing cfg) piece)
-    fullUpdPiece = (updatePiece move False piece)
 
     state1 = removePieces state (gcDeferRemoves cfg) eaten
     state2 = removePieceByCoord state1 (ppos piece)
     state3 = state2 { gsField = updatedPiece : (gsField state2)
                     , gsUpdPiece = case gsUpdPiece state2 of
-                                     (Just p) -> Just $ p { ppos = to }
-                                     Nothing -> Just fullUpdPiece }
+                                     (Just p) -> Just $ updatePiece move False p
+                                     Nothing -> Just $ updatePiece move False piece }
 
 execMovement :: Game -> Movement -> Game
 execMovement game@(Game cfg state) move@(Movement from _ eaten bk _) =
