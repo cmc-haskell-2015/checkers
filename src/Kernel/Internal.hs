@@ -10,6 +10,8 @@ module Kernel.Internal where
 
 import Data.List(find)
 
+-- * Описание базовых типов и вспомогательных функций
+
 -- | Описание 2-х состояний шашки
 data PieceType =
   Man -- ^ Простая шашка
@@ -74,6 +76,8 @@ data WinnerType =
   Normal -- ^ Стандартный тип победителя
   | Reversed -- ^ Поддавки
   deriving (Show, Eq)
+
+-- * Типы для конфигурирования и предопределённые варианты настроек
 
 -- | Специальный тип для определения конечного значения/бесконечности, нужен для ходов дамки
 data Infinitable a =
@@ -229,6 +233,8 @@ kanadianConfig = GameConfig 12 (Regular 5) White True Normal
 reversedConfig :: GameConfig
 reversedConfig = GameConfig 8 (Regular 3) White True Reversed
                             russianMenConfig russianKingConfig True False True
+
+-- * Основной интерфейс ядра игры
 
 -- | Тип текущего состояния игры
 data GameState = GameState { gsField :: [Piece] -- ^ Список всех шашек на доске

@@ -16,6 +16,8 @@ import Kernel
 import DrawingBase( Drawing(Drawing) )
 import PlayerBase( Player(Player) )
 
+-- * Предопределённые константы, типы и утилиты для рисования
+
 -- | Размер клетки по умолчанию
 defaultCellSize = (Wx.sz 50 50) -- with border
 
@@ -31,13 +33,13 @@ whiteColor = (Wx.rgb 230 220 210)
 -- | Цвет чёрных клеток
 blackColor = (Wx.rgb 150 150 150)
 
--- | Дополнительная информация, необходимая для отрисовки и получения ходов
-data DrawingWxInfo = DrawingWxInfo
-    { diCanvas :: Wx.Window () } -- ^ Окно, на котором всё рисуется
-
 -- | Получить координату левого верхнего угла клетки (w -> h -> x -> y)
 coord2point :: Int -> Int -> Int -> Int -> Wx.Point
 coord2point w h x y = (Wx.point (x * w) (y * h))
+
+-- | Дополнительная информация, необходимая для отрисовки и получения ходов
+data DrawingWxInfo = DrawingWxInfo
+    { diCanvas :: Wx.Window () } -- ^ Окно, на котором всё рисуется
 
 -- | Загрузить правильную картинку шашки (в зависимости от цвета и типа)
 loadPieceImg :: PieceType -> Color -> IO (Wx.Image ())
@@ -57,6 +59,8 @@ paintAtCoord dc rect@(Wx.Rect x y w h) img (Coord rows cols) (Coord row col) = d
                              (y + (rows - row - 1) * h `div` rows + borderSize))
                    (Wx.sz (w `div` cols - borderSize*2)
                           (h `div` rows - borderSize*2))
+
+-- * Функции, рисующие для рисования поле на канве
 
 -- | Нарисовать шашку
 paintPiece :: Wx.DC() -> Wx.Rect -> Coord -> Piece -> IO()
@@ -165,6 +169,8 @@ repaintGame (DrawingWxInfo canvas) game = do
     Wx.repaint canvas
     return ()
 
+-- * Получение хода от пользователя
+
 -- | Получить цвет ячейки по её координате
 coord2color :: Int -> Int -> Wx.Color
 coord2color row col = if ((row + col) `mod` 2) == 0
@@ -182,14 +188,6 @@ initCanvasWindow parent cfg = do
     boardSize = (gcBoardSize cfg)
     totalSize = (Wx.sz ((Wx.sizeW defaultCellSize) * boardSize)
                        ((Wx.sizeH defaultCellSize) * boardSize))
-
--- | Вывести сообщение о плохом ходе
-badMovement :: IO ()
-badMovement = putStrLn "Bad move, try again"
-
--- | Вывести приглашение к ходу
-invitePlayer :: Color -> IO ()
-invitePlayer color = putStrLn $ (show color) ++ " player, your turn!"
 
 -- | Перевести точку на канве в координату на поле
 point2Coord :: Coord -> Wx.Size -> Wx.Point -> Coord
@@ -264,6 +262,8 @@ waitMoveSelect mvar canvas game piece@(Piece _ color pos) isFirst = do
   where
     moves = map mto (getMovesByCoord game pos isFirst)
 
+-- * Функции из интерфейса Player
+
 -- | Ожидание хода от пользователя
 waitForMovement :: Wx.Window () -> Game -> Color -> Maybe Coord -> IO [CoordPair]
 waitForMovement canvas game@(Game cfg _) color mc = do
@@ -281,6 +281,14 @@ waitForMovement canvas game@(Game cfg _) color mc = do
     mp = case mc of
            Nothing -> Nothing
            Just c -> getPiece game c
+
+-- | Вывести сообщение о плохом ходе
+badMovement :: IO ()
+badMovement = putStrLn "Bad move, try again"
+
+-- | Вывести приглашение к ходу
+invitePlayer :: Color -> IO ()
+invitePlayer color = putStrLn $ (show color) ++ " player, your turn!"
 
 -- | Проинициализировать структуру системы управления и вывода
 -- | Возвращает систему вывода и окно для отрисовки (необходимо для создания игрока)

@@ -17,6 +17,8 @@ import Kernel( Game(Game), getPiece
              , getMovesByColor )
 import PlayerBase ( Player(Player) )
 
+-- * Вспомогательный функции парсинга и обработки строк
+
 -- | Конвертировать букву столбца в компоненту координаты
 chr2col :: GameConfig -> Char -> Maybe Int
 chr2col cfg ch = if cadiff >= 0 &&
@@ -86,6 +88,8 @@ strip s = lstrip $ rstrip s
     rstrip s = if last s == ' '
               then rstrip $ init s
               else s
+
+-- * Основные внутренние функции модуля
 
 -- | Вывести список возможных ходов для данной клетки (если есть)
 showMovesForCoord :: Game -> Color -> Coord -> Bool -> IO ()
@@ -173,6 +177,8 @@ processLine game@(Game cfg _) color c s =
   where
     splitted = map strip (splitOn '-' s)
     coords = map (str2coord cfg) splitted
+
+-- * Функции из интерфейса Player
 
 -- | Ждать от пользователя ввода
 waitForMovement :: Game -> Color -> Maybe Coord -> IO [CoordPair]

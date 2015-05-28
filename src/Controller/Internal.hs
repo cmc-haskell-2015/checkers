@@ -13,6 +13,8 @@ import PlayerBase ( Player
 import DrawingBase ( Drawing
                    , repaint )
 
+-- * Типы и вспомогательные функции
+
 -- | Окружение игры.
 data GameEnv = GameEnv
     { geBlackPlayer :: Player  -- ^ Чёрный игрок
@@ -32,6 +34,8 @@ getPlayer :: GameEnv -> Color -> Player
 getPlayer env cl = case cl of
                      Black -> (geBlackPlayer env)
                      White -> (geWhitePlayer env)
+
+-- * Функции непосредственной работы контроллера
 
 -- | Выдать сообщение о плохом ходе и запустить следующую итерацию ввода данных
 invalidMove :: GameEnv -> Game -> Color -> IO Winner

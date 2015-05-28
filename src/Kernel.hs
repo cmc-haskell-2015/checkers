@@ -3,11 +3,11 @@ Module      : Kernel
 Description : Связующий модуль модуль с основными типами и функциями.
 License     : LGPLv3
 
-Базовый модуль - "Ядро" программы. Реализована бОльшая часть всех типов и функций, 
+Базовый модуль - "Ядро" программы. Реализована бОльшая часть всех типов и функций,
 необходимые для поддержания текущего состояния игры.
 -}
 module Kernel ( PieceType(Man, King)
-              , Color(White, Black)
+              , Color(White, Black), nextColor
               , Winner(Winner, DrawBy)
               , Coord(Coord), crow, ccol
               , Piece(Piece), ptype, pcolor, ppos
@@ -43,6 +43,5 @@ module Kernel ( PieceType(Man, King)
               , makeMove
               , initState
               , createGame ) where
-              
+
 import Kernel.Internal
-              
