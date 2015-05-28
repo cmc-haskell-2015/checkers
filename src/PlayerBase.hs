@@ -3,10 +3,7 @@ Module      : PlayerBase
 Description : Модуль с определением типа системы ввода (игрока)
 License     : LGPLv3
 -}
-module PlayerBase ( Player(Player)
-                  , waitForMovement
-                  , invitePlayer
-                  , badMovement ) where
+module PlayerBase where
 
 import Kernel( Game
              , Color

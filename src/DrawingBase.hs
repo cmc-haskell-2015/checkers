@@ -3,8 +3,7 @@ Module      : DrawingBase
 Description : Модуль с определением типа системы вывода
 License     : LGPLv3
 -}
-module DrawingBase ( Drawing(Drawing)
-                   , repaint ) where
+module DrawingBase where
 
 import Kernel
 
