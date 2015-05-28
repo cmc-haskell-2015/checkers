@@ -3,7 +3,7 @@
 
 name:                checkers
 version:             0.1
-synopsis:            Игра «Шашки».
+synopsis:            The Checkers Game.
 -- description:
 homepage:            https://github.com/cmc-haskell-2015/checkers
 license:             LGPL-3
