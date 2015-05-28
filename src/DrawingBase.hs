@@ -1,9 +1,14 @@
+{-|
+Module      : DrawingBase
+Description : Модуль с определением типа системы вывода
+License     : LGPLv3
+-}
 module DrawingBase ( Drawing(Drawing)
                    , repaint ) where
 
 import Kernel
 
-data Drawing = Drawing { dRepaint :: Game -> IO () }
-
-repaint :: Drawing -> Game -> IO ()
-repaint dr g = (dRepaint dr) g
+-- | Тип, описывающий систему вывода
+data Drawing = Drawing
+	{ repaint :: Game -> IO () -- ^ Перерисовать текущее состояние игры
+	}

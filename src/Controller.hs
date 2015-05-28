@@ -1,3 +1,8 @@
+{-|
+Module      : Controller
+Description : Связующий модуль, содержащий главный цикл игры
+License     : LGPLv3
+-}
 module Controller( run ) where
 
 import Kernel
@@ -8,30 +13,38 @@ import PlayerBase ( Player
 import DrawingBase ( Drawing
                    , repaint )
 
+-- | Получить следующий цвет.
 nextColor :: Color -> Color
 nextColor White = Black
 nextColor _ = White
 
-data GameEnv = GameEnv { geBlackPlayer :: Player
-                       , geWhitePlayer :: Player
-                       , geDrawing :: [Drawing] }
+-- | Окружение игры.
+data GameEnv = GameEnv
+    { geBlackPlayer :: Player  -- ^ Чёрный игрок
+    , geWhitePlayer :: Player  -- ^ Белый игрок
+    , geDrawing :: [Drawing]   -- ^ Все системы вывода
+    }
 
+-- | Вызвать перерисовку у всех систем вывода
 repaintAll :: Game -> [Drawing] -> IO ()
 repaintAll _ [] = return ()
 repaintAll game (first:rest) = do
     repaint first game
     repaintAll game rest
 
+-- | Получить игрока по цвету
 getPlayer :: GameEnv -> Color -> Player
 getPlayer env cl = case cl of
                      Black -> (geBlackPlayer env)
                      White -> (geWhitePlayer env)
 
+-- | Выдать сообщение о плохом ходе и запустить следующую итерацию ввода данных
 invalidMove :: GameEnv -> Game -> Color -> IO Winner
 invalidMove env game color = do
     badMovement (getPlayer env color)
     makeTurnImpl env game color Nothing
 
+-- | Проверить, не закончилась ли партия и запустить итерацию хода
 makeTurn :: GameEnv -> Game -> Color -> IO Winner
 makeTurn env@(GameEnv _ _ drawings) game color =
     case getWinner game color of
@@ -42,13 +55,16 @@ makeTurn env@(GameEnv _ _ drawings) game color =
         repaintAll game drawings
         return winner
 
+-- | Запустить следующую итерацию хода (закончив предыдущий ход и сменив цвет)
 nextTurn :: GameEnv -> Game -> Color -> IO Winner
 nextTurn env game color = makeTurn env (finishTurn game) (nextColor color)
 
+-- | Проверить, может ли шашка ходить дальше
 checkMovements :: Game -> Maybe Coord -> Bool
 checkMovements game Nothing = True
 checkMovements game (Just c) = (length $ getMovesByCoord game c False) > 0
 
+-- | Проверить валидность списка пар координат, запустить Movement'ы, если они валидны
 processMoves :: GameEnv -> Game -> Color -> Maybe Coord -> [CoordPair] -> IO Winner
 processMoves env game color lastc [] = makeTurnImpl env game color lastc
 processMoves env game@(Game cfg _) color lastc (first:rest) =
@@ -62,11 +78,13 @@ processMoves env game@(Game cfg _) color lastc (first:rest) =
                       then nextTurn env game_ color
                       else processMoves env game_ color (Just $ mto m) rest
 
+-- | Получить от пользователя ход и запустить его анализ
 processMoves2 :: GameEnv -> Game -> Color -> Maybe Coord -> IO Winner
 processMoves2 env game color lastc = do
     moves <- waitForMovement (getPlayer env color) game color lastc
     processMoves env game color lastc moves
 
+-- | Перерисовать игру и передать управление игроку (или сменить игрока)
 makeTurnImpl :: GameEnv -> Game -> Color -> Maybe Coord -> IO Winner
 makeTurnImpl env@(GameEnv _ _ drawings) game color lastc = do
     repaintAll game drawings
@@ -74,6 +92,7 @@ makeTurnImpl env@(GameEnv _ _ drawings) game color lastc = do
       then processMoves2 env game color lastc
       else nextTurn env game color
 
+-- | Главный цикл игры
 run :: GameConfig -> Player -> Player -> [Drawing] -> IO Winner
 run cfg bplayer wplayer drawings = do
     makeTurn (GameEnv bplayer wplayer drawings) game (gcFirstColor cfg)

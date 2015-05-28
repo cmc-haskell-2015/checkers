@@ -1,3 +1,8 @@
+{-|
+Module      : PlayerConsole
+Description : Консольная система ввода действий игроков
+License     : LGPLv3
+-}
 module PlayerConsole ( createPlayerConsole ) where
 
 import Kernel( Game(Game), getPiece
@@ -12,6 +17,7 @@ import Kernel( Game(Game), getPiece
              , getMovesByColor )
 import PlayerBase ( Player(Player) )
 
+-- | Конвертировать букву столбца в компоненту координаты
 chr2col :: GameConfig -> Char -> Maybe Int
 chr2col cfg ch = if cadiff >= 0 &&
                     cadiff < (gcBoardSize cfg)
@@ -27,6 +33,7 @@ chr2col cfg ch = if cadiff >= 0 &&
     cadiff = ccode - acode
     cladiff = ccode - lacode
 
+-- | Конвертировать номер строки в компоненту координаты
 chr2row :: GameConfig -> Char -> Maybe Int
 chr2row cfg ch = if cndiff >= 0 &&
                     cndiff < (gcBoardSize cfg)
@@ -37,6 +44,7 @@ chr2row cfg ch = if cndiff >= 0 &&
     ncode = fromEnum '1'
     cndiff = ccode - ncode
 
+-- | Конвертировать цифро-буквенное представление координаты (напр., 'e2') в нормальное
 str2coord :: GameConfig -> String -> Maybe Coord
 str2coord cfg [x, y] = str2coordImpl (chr2row cfg y) (chr2col cfg x)
   where
@@ -46,12 +54,14 @@ str2coord cfg [x, y] = str2coordImpl (chr2row cfg y) (chr2col cfg x)
     str2coordImpl (Just row) (Just col) = Just $ Coord row col
 str2coord _ _ = Nothing
 
+-- | Перевести нормальную координату в цифро-буквенное представление
 coord2str :: Coord -> String
 coord2str (Coord row col) = [scol, srow]
   where
     scol = (toEnum $ col + (fromEnum 'a'))
     srow = (toEnum $ row + (fromEnum '1'))
 
+-- | Разбить строку по данному разделителю
 splitOn :: Char -> String -> [String]
 splitOn ch s = splitOnImpl ch "" s
   where
@@ -62,6 +72,7 @@ splitOn ch s = splitOnImpl ch "" s
                                       then s:(splitOnImpl ch "" rests)
                                       else (splitOnImpl ch (s ++ [firsts]) rests)
 
+-- | Убрать пробелы в начале и конце строки
 strip :: String -> String
 strip s = lstrip $ rstrip s
   where
@@ -76,6 +87,7 @@ strip s = lstrip $ rstrip s
               then rstrip $ init s
               else s
 
+-- | Вывести список возможных ходов для данной клетки (если есть)
 showMovesForCoord :: Game -> Color -> Coord -> Bool -> IO ()
 showMovesForCoord game color c first =
     case piece of
@@ -88,22 +100,27 @@ showMovesForCoord game color c first =
     moves = getMovesByCoord game c first
     smoves = [(coord2str c) ++ "-" ++ (coord2str (mto m)) ++ "\n" | m <- moves]
 
+-- | Вывести список возможных ходов для данной клетки с учётом текущего состояния
+-- | (первый-не первый ход в серии и т.д.)
 showCoordMoves :: Game -> Color -> Maybe Coord -> Maybe Coord -> IO ()
 showCoordMoves game color (Just c) fr = showMovesForCoord game color c (fr == Nothing)
 showCoordMoves game color Nothing fr@(Just c) = showMovesForCoord game color c False
 showCoordMoves _ _ Nothing Nothing = return ()
 
+-- | Вывести список возможных ходов для игрока данного цвета
 showColorMoves :: Game -> Color -> IO ()
 showColorMoves game color = putStrLn $ concat smoves
   where
     moves = getMovesByColor game color
     smoves = [(coord2str (mfrom m)) ++ "-" ++ (coord2str (mto m)) ++ "\n" | m <- moves]
 
+-- | Вывести сообщение и ждать нового ввода
 badInput :: Game -> Color -> Maybe Coord -> String -> IO [CoordPair]
 badInput game color c s = do
     putStrLn s
     waitForMovement game color c
 
+-- | Разбить массив с серией ходов на пары (например, a1-c3-e5 на [a1-c3, c3-e5])
 makeCoordPairs :: Game -> [Maybe Coord] -> [CoordPair]
 makeCoordPairs _ [] = []
 makeCoordPairs _ [x] = []
@@ -119,24 +136,23 @@ makeCoordPairs game lst =
     extractMaybe :: Maybe Coord -> Coord
     extractMaybe (Just x) = x
 
+-- | Сравнить текущий цвет и цвет первой шашки в списке (если есть)
 checkColor :: Game -> Color -> [Maybe Coord] -> Bool
 checkColor _ _ [] = False
 checkColor _ _ (Nothing:_) = False
 checkColor game color ((Just coord):_) =
-    if piece /= Nothing
-    then (pcolor $ extractMaybe piece) == color
-    else False
-  where
-    piece = getPiece game coord
-    extractMaybe :: Maybe Piece -> Piece
-    extractMaybe (Just x) = x
+    case piece of
+      Nothing -> False
+      Just p -> (pcolor p) == color
 
+-- | Проверить, совпадает ли данная шашка (если есть) и первая шашка в списке
 checkFirst :: Maybe Coord -> [Maybe Coord] -> Bool
-checkFirst Nothing lst = True
+checkFirst Nothing _ = True
 checkFirst _ [] = False
 checkFirst _ (Nothing:_) = False
 checkFirst (Just c1) ((Just c2):_) = (c1 == c2)
 
+-- | Обработать одну строку со вводом, вернуть список ходов
 processLine :: Game -> Color -> Maybe Coord -> String -> IO [CoordPair]
 processLine game@(Game cfg _) color c ('m':s) = do
     showCoordMoves game color (str2coord cfg (strip s)) c
@@ -158,16 +174,20 @@ processLine game@(Game cfg _) color c s =
     splitted = map strip (splitOn '-' s)
     coords = map (str2coord cfg) splitted
 
+-- | Ждать от пользователя ввода
 waitForMovement :: Game -> Color -> Maybe Coord -> IO [CoordPair]
 waitForMovement game color c = do
     line <- getLine
     processLine game color c line
 
+-- | Высказать пользователю что-нибудь нехорошее о его последнем ходе
 badMovement :: IO ()
 badMovement = putStrLn "Bad move, try again"
 
+-- | Напечатать приглашение ко вводу
 invitePlayer :: Color -> IO ()
 invitePlayer color = putStrLn $ (show color) ++ " player, your turn!"
 
+-- | Создать консольный интерфейс для пользователя
 createPlayerConsole :: Player
 createPlayerConsole = Player waitForMovement invitePlayer badMovement

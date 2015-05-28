@@ -1,3 +1,8 @@
+{-|
+Module      : Main-nowx
+Description : Модуль с точкой входа для консольной версии приложения
+License     : LGPLv3
+-}
 module Main where
 
 import Kernel
@@ -6,6 +11,7 @@ import DrawingConsole
 import Controller
 import AIPlayer
 
+-- | Точка входа для консольной версии программы
 main :: IO ()
 main = do
     winner <- run cfg player1 player2 [drawing]

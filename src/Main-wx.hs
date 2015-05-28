@@ -1,3 +1,8 @@
+{-|
+Module      : Main-wx
+Description : Модуль с точкой входа для gui версии приложения
+License     : LGPLv3
+-}
 module Main( main ) where
 
 import Control.Concurrent
@@ -16,9 +21,11 @@ import WxSuite
 import Controller
 import AIPlayer
 
+-- | Точка входа для gui версии программы
 main
   = start gui
 
+-- | Точка входа для основного потока игры
 runGame :: GameConfig -> Player -> Player -> [Drawing] -> IO ()
 runGame cfg player1 player2 drawings = do
     winner <- run cfg player1 player2 drawings
@@ -27,8 +34,17 @@ runGame cfg player1 player2 drawings = do
       DrawBy color -> putStrLn $ "It's a trap for " ++ (show color) ++ " player!"
     return ()
 
-playerChoices = [ "Человек из консоли", "Человек с мышкой", "Компьютер"]
-aiLevels = [ "Глупый", "Средний", "Неплохой"]
+-- | Список возможных игроков для gui
+playerChoices = [ "Человек из консоли"
+                , "Человек с мышкой"
+                , "Компьютер" ]
+
+-- | Список названий уровней сложностей ИИ для gui
+aiLevels = [ "Глупый"
+           , "Средний"
+           , "Неплохой" ]
+
+-- | Список возможных модификаций шашек
 gameTypeChoices = [ "Русские"
                   , "Международные"
                   , "Английские"
@@ -36,6 +52,8 @@ gameTypeChoices = [ "Русские"
                   , "Бразильские"
                   , "Канадские"
                   , "Поддавки" ]
+
+-- | Точка входа для gui: построение интерфейса и создание всех событий
 gui :: IO ()
 gui
   = do

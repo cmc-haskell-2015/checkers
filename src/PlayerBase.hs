@@ -1,3 +1,8 @@
+{-|
+Module      : PlayerBase
+Description : Модуль с определением типа системы ввода (игрока)
+License     : LGPLv3
+-}
 module PlayerBase ( Player(Player)
                   , waitForMovement
                   , invitePlayer
@@ -8,15 +13,9 @@ import Kernel( Game
              , Coord
              , CoordPair )
 
-data Player = Player { pWaitForMovement :: Game -> Color -> Maybe Coord -> IO [CoordPair]
-                     , pInvitePlayer :: Color -> IO ()
-                     , pBadMovement :: IO () }
-
-waitForMovement :: Player -> Game -> Color -> Maybe Coord -> IO [CoordPair]
-waitForMovement player game color c = (pWaitForMovement player) game color c
-
-invitePlayer :: Player -> Color -> IO ()
-invitePlayer player color = (pInvitePlayer player) color
-
-badMovement :: Player -> IO ()
-badMovement player = pBadMovement player
+-- | Тип абстрактного игрока. Может быть как произвольным интерфейсом для
+-- | взаимодействия с пользователем, так и ИИ, считывалкой ходов из файла и проч.
+data Player = Player
+    { waitForMovement :: Game -> Color -> Maybe Coord -> IO [CoordPair] -- Вернуть ход пользователя
+    , invitePlayer :: Color -> IO ()                        -- Выдать пользователю приглашение
+    , badMovement :: IO () }                                -- Выдать пользователю предупреждение о плохом ходе
