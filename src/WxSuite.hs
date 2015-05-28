@@ -173,8 +173,8 @@ unbindMouse win = Wx.windowOnMouse win False emptyOnMouse
 
 repaintWithState :: Wx.Window () -> Game -> Color -> Maybe Piece -> Bool -> IO ()
 repaintWithState canvas game color mp isFirst = do
-    Wx.windowOnPaint canvas (complexOnPaint paintActions game)
-    Wx.repaint canvas
+    --Wx.windowOnPaint canvas (complexOnPaint paintActions game)
+    --Wx.repaint canvas
     return ()
   where
     moves = case mp of
