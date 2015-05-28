@@ -6,4 +6,4 @@ License     : LGPLv3
 module WxSuite( createWxDrawing
               , createWxPlayer ) where
 
-import WxSuite.internal
+import WxSuite.Internal
